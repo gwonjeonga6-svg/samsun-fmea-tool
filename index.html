@@ -431,6 +431,15 @@
           <div style="font-size:12px;color:var(--gray-400);margin-top:8px;">※ 심각성 8점 이상이면 RPN값이 낮아도 개선활동 포함을 검토하세요.</div>
         </div>
         <div id="fmea-step4-container"></div>
+
+        <!-- RPN 요약표 -->
+        <div class="card" id="rpn-summary-card" style="margin-top:8px;">
+          <div class="card-header" style="margin-bottom:10px;padding-bottom:8px;">
+            <div class="card-eyebrow">RPN 순위표</div>
+            <div class="card-title" style="font-size:15px;">점수 높은 순 — 우선순위 한눈에 보기</div>
+          </div>
+          <div id="rpn-summary-table"></div>
+        </div>
         <div class="btn-row" style="margin-top:4px;">
           <button class="btn btn-ghost" onclick="goStep(3)">← 이전</button>
           <button class="btn btn-primary" onclick="goStep(5)">다음 단계 →</button>
@@ -777,6 +786,7 @@ function buildStep4() {
     }
     setTimeout(() => updateRPN4(div.querySelector('input[type=range]')), 0);
   });
+  setTimeout(updateRPNSummary, 100);
 }
 
 function updateRPN4(slider) {
@@ -801,13 +811,98 @@ function updateRPN4(slider) {
   valEl.className = `rpn-val ${cls}`;
   badgeEl.className = `rpn-badge ${cls}`;
   badgeEl.textContent = label;
+  // 요약표 갱신
+  updateRPNSummary();
 }
 
-// Step 5 — 5Why + 피시본
+function updateRPNSummary() {
+  const table = document.getElementById('rpn-summary-table');
+  if (!table) return;
+  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
+  if (items.length === 0) { table.innerHTML = '<p style="color:var(--gray-400);font-size:13px;">슬라이더를 조작하면 자동으로 업데이트됩니다.</p>'; return; }
+
+  // 데이터 수집
+  const rows = [];
+  items.forEach(item => {
+    const stepLabel = item.querySelector('.ws-step')?.textContent || '';
+    const spans = item.querySelectorAll('.ws-header span');
+    const stepName = spans[1]?.textContent || '';
+    const subName = spans[2]?.textContent || '';
+    const sliders = item.querySelectorAll('input[type=range]');
+    const s = parseInt(sliders[0]?.value||5);
+    const o = parseInt(sliders[1]?.value||5);
+    const d = parseInt(sliders[2]?.value||5);
+    const rpn = s * o * d;
+    const scope = item.querySelector('select')?.value || '';
+    rows.push({ stepLabel, stepName, subName, s, o, d, rpn, scope });
+  });
+
+  // RPN 높은 순 정렬
+  rows.sort((a, b) => b.rpn - a.rpn);
+
+  const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
+  const bgMap   = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:var(--gray-100);">
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">순위</th>
+        <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--gray-700);">단계 / 하부단계</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">S</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">O</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">D</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);">개선범위</th>
+      </tr>
+    </thead><tbody>`;
+
+  rows.forEach((r, i) => {
+    let cls = 'low';
+    if (r.rpn >= 200) cls = 'critical';
+    else if (r.rpn >= 100) cls = 'high';
+    else if (r.rpn >= 50) cls = 'mid';
+    const rankBg = i === 0 ? '#1a5fa8' : i === 1 ? '#3b82f6' : i === 2 ? '#93c5fd' : 'var(--gray-300)';
+    const rankColor = i < 3 ? '#fff' : 'var(--gray-700)';
+    html += `<tr style="border-bottom:1px solid var(--gray-100);">
+      <td style="padding:8px 10px;text-align:center;">
+        <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:12px;font-weight:700;line-height:24px;">${i+1}</span>
+      </td>
+      <td style="padding:8px 10px;">
+        <span style="font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:3px;margin-right:6px;">${r.stepLabel}</span>
+        <span style="font-weight:600;color:var(--gray-900);">${r.stepName}</span>
+        <span style="color:var(--gray-400);font-size:12px;margin-left:4px;">${r.subName}</span>
+      </td>
+      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.s}</td>
+      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.o}</td>
+      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.d}</td>
+      <td style="padding:8px 10px;text-align:center;">
+        <span style="font-size:16px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 10px;border-radius:4px;">${r.rpn}</span>
+      </td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--gray-600);">${r.scope || '-'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  table.innerHTML = html;
+}
+
 function buildStep5() {
   const container = document.getElementById('fmea-step5-container');
-  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
-  if (container.children.length === items.length && container.children.length > 0) return;
+  const allItems = document.querySelectorAll('#fmea-step4-container .ws-section');
+
+  // 4단계에서 "선정" 또는 "고려대상"으로 체크된 항목만 필터링
+  const selectedItems = [...allItems].filter(item => {
+    const scope = item.querySelector('select')?.value || '';
+    return scope === '선정 (개선활동 포함)' || scope === '고려대상 (심각성 8점 이상)';
+  });
+
+  // 선정 항목이 없으면 전체 사용 (선택 안 한 경우 대비)
+  const items = selectedItems.length > 0 ? selectedItems : [...allItems];
+
+  // 현재 표시 중인 key 목록과 비교해서 다르면 재빌드
+  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.key).join(',');
+  const newKeys = items.map(i => i.dataset.key).join(',');
+  if (curKeys === newKeys && container.children.length > 0) return;
+
   // 기존 값 백업
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
@@ -817,20 +912,31 @@ function buildStep5() {
   container.innerHTML = '';
 
   if (items.length === 0) {
-    // 4단계 없으면 기본 1개
-    const div = createWhyItem('1-1', '단계 1', '하부단계 1-1');
-    container.appendChild(div);
+    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 4단계에서 개선활동 범위를 선정해주세요.</p></div>`;
     return;
+  }
+
+  // 선정 항목 수 안내 배너
+  if (selectedItems.length > 0) {
+    const banner = document.createElement('div');
+    banner.className = 'info-box blue';
+    banner.style.marginBottom = '12px';
+    banner.innerHTML = `✅ 4단계에서 <strong>${selectedItems.length}개 항목</strong>이 선정되었습니다. 선정된 항목에 대해 5Why 분석을 진행합니다.`;
+    container.appendChild(banner);
   }
 
   items.forEach(item => {
     const key = item.dataset.key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-    // 4단계 헤더는 span (input 아님)
     const spans = item.querySelectorAll('.ws-header span');
     const stepName = spans[1]?.textContent || '단계';
     const subName = spans[2]?.textContent || '하부단계';
-    const div = createWhyItem(key, stepName, subName, stepLabel);
+    // RPN 점수도 가져와서 표시
+    const sliders = item.querySelectorAll('input[type=range]');
+    const s = sliders[0]?.value||'-', o = sliders[1]?.value||'-', d = sliders[2]?.value||'-';
+    const rpn = sliders.length >= 3 ? parseInt(s)*parseInt(o)*parseInt(d) : '-';
+    const scope = item.querySelector('select')?.value || '';
+    const div = createWhyItem(key, stepName, subName, stepLabel, rpn, scope);
     container.appendChild(div);
     // 이전 값 복원
     if (saved[key]) {
@@ -845,7 +951,10 @@ function buildStep5() {
   });
 }
 
-function createWhyItem(key, stepName, subName, stepLabel) {
+function createWhyItem(key, stepName, subName, stepLabel, rpn, scope) {
+  const rpnColor = rpn >= 200 ? '#b03030' : rpn >= 100 ? '#c2410c' : rpn >= 50 ? '#8a5e00' : '#0e6b4f';
+  const rpnBadge = rpn ? `<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;">RPN ${rpn}</span>` : '';
+  const scopeBadge = scope === '고려대상 (심각성 8점 이상)' ? `<span style="font-size:10px;background:rgba(255,200,0,0.3);color:#fff;padding:1px 6px;border-radius:3px;margin-left:4px;">고려대상</span>` : '';
   const div = document.createElement('div');
   div.className = 'ws-section';
   div.dataset.key = key;
@@ -854,6 +963,7 @@ function createWhyItem(key, stepName, subName, stepLabel) {
       <span class="ws-step">${stepLabel || key}</span>
       <span style="font-size:14px;font-weight:700;color:#fff;flex:1;">${stepName}</span>
       <span style="font-size:12px;color:rgba(255,255,255,0.75);">${subName}</span>
+      ${rpnBadge}${scopeBadge}
     </div>
     <div class="ws-body">
       <div class="why-box">
