@@ -242,18 +242,15 @@
   /* Print styles */
   @media print {
     .sidebar, .topbar, .btn-row, .export-bar, .save-btns, button,
-    .proc-del, .proc-sub-del, .restore-banner, .progress-pill,
-    .rpn-summary-card, #rpn-summary-card { display:none !important; }
+    .proc-del, .proc-sub-del, .restore-banner, .progress-pill { display:none !important; }
     .main { margin-left:0 !important; }
     .page-content { padding:4px 10px !important; max-width:100% !important; margin-top:0 !important; }
     .ws-section, .card { break-inside:avoid; box-shadow:none !important; border:1px solid #ccc !important; margin-bottom:8px !important; }
     body { font-size:11pt; background:#fff; margin:0 !important; }
     .rpn-box, .why-box, .redesign-box, .paper-box { border:1px solid #ccc; }
     input[type=text], input[type=date], textarea, select {
-      border:1px solid #ccc !important;
-      background:#fff !important;
-      -webkit-print-color-adjust:exact;
-      print-color-adjust:exact;
+      border:1px solid #ccc !important; background:#fff !important;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
     .app-shell { display:block !important; }
     .ws-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -268,12 +265,15 @@
       color:#fff; background:#1a5fa8; padding:5px 10px; margin-bottom:8px;
       break-after:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
-    /* 인쇄 시 슬라이더 숨기고 수식+값만 표시 */
+    /* 4단계: 개별 슬라이더 카드 숨기고 순위표만 출력 */
+    body.print-mode #fmea-step4-container { display:none !important; }
+    body.print-mode #rpn-summary-card { display:block !important; box-shadow:none !important; }
+    body.print-mode #rpn-summary-card button { display:none !important; }
+    /* 7단계: 슬라이더 숨기고 수식+값만 표시 */
     body.print-mode .rpn-sliders,
     body.print-mode .paper-sliders { display:none !important; }
     body.print-mode .rpn-result,
     body.print-mode .paper-result { border:1px solid #ccc !important; padding:6px 10px !important; border-radius:4px; }
-    body.print-mode .rpn-title { font-size:9pt !important; }
     body.print-mode .step-print-title + .card,
     body.print-mode .step-print-title + div { break-before:avoid; }
   }
