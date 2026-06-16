@@ -1732,8 +1732,8 @@ function saveFMEA() {
   }));
   data.step3 = [...document.querySelectorAll('#fmea-step3-container .ws-section')].map(item=>({
     key: item.dataset.key,
-    stepName: item.querySelectorAll('.ws-header input')[0]?.value||item.querySelector('.ws-header span:nth-child(2)')?.textContent||'',
-    subName: item.querySelectorAll('.ws-header input')[1]?.value||item.querySelector('.ws-header span:nth-child(3)')?.textContent||'',
+    stepName: item.querySelector('.ws-header > div > span:first-child')?.textContent||'',
+    subName: item.querySelector('.sub-name-input')?.value||'',
     rows: [...item.querySelectorAll('.ws-row.cols3')].map(row=>({
       failure: row.querySelectorAll('textarea')[0]?.value||'',
       cause: row.querySelectorAll('textarea')[1]?.value||'',
@@ -1898,17 +1898,14 @@ function downloadWord() {
   // 안전하게 헤더 읽는 헬퍼
   function getHeaderInfo(item) {
     const stepLabel = item.querySelector('.ws-step')?.textContent || '';
-    // 3단계는 input, 그 외는 span
-    const inputs = item.querySelectorAll('.ws-header input');
-    if (inputs.length >= 2) {
-      return { stepLabel, stepName: inputs[0].value || '', subName: inputs[1].value || '' };
+    // 새 구조: span(단계명) + input.sub-name-input(하부단계명) 또는 span+span
+    const subInput = item.querySelector('.sub-name-input');
+    const headerDiv = item.querySelector('.ws-header > div');
+    const spans = headerDiv ? [...headerDiv.querySelectorAll('span')] : [];
+    if (subInput !== null) {
+      return { stepLabel, stepName: spans[0]?.textContent||'', subName: subInput.value||'' };
     }
-    const spans = item.querySelectorAll('.ws-header span');
-    return {
-      stepLabel,
-      stepName: spans[1]?.textContent || '',
-      subName: spans[2]?.textContent || ''
-    };
+    return { stepLabel, stepName: spans[0]?.textContent||'', subName: spans[1]?.textContent||'' };
   }
 
   // 3단계 데이터
@@ -2218,8 +2215,8 @@ function autoSave() {
     }));
     data.step3 = [...document.querySelectorAll('#fmea-step3-container .ws-section')].map(item=>({
       key: item.dataset.key,
-      stepName: item.querySelectorAll('.ws-header input')[0]?.value||item.querySelector('.ws-header span:nth-child(2)')?.textContent||'',
-      subName: item.querySelectorAll('.ws-header input')[1]?.value||item.querySelector('.ws-header span:nth-child(3)')?.textContent||'',
+      stepName: item.querySelector('.ws-header > div > span:first-child')?.textContent||'',
+      subName: item.querySelector('.sub-name-input')?.value||'',
       rows: [...item.querySelectorAll('.ws-row.cols3')].map(row=>({
         failure: row.querySelectorAll('textarea')[0]?.value||'',
         cause: row.querySelectorAll('textarea')[1]?.value||'',
