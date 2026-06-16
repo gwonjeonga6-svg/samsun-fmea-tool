@@ -1540,35 +1540,29 @@ function initStep8() {
     return;
   }
 
-  // 일반 빌드: 6단계에서 자동 연동
-  if (container.children.length !== redesigns.length || container.children.length === 0) {
-    const savedRows = [...container.querySelectorAll('.monitor-row')].map(row => ({
-      redesign: row.querySelector('textarea')?.value||'',
-      responsible: row.querySelectorAll('.grid4 input')[0]?.value||'',
-      deadline: row.querySelectorAll('.grid4 input')[1]?.value||'',
-      kpi: row.querySelectorAll('.grid4 input')[2]?.value||'',
-      result: row.querySelectorAll('.grid4 input')[3]?.value||'',
-      months: [...row.querySelectorAll('.month-item input')].map(m=>m.value)
-    }));
-    container.innerHTML = '';
-    redesigns.forEach((item, i) => {
-      addMonitorFromRedesign(item);
-      if (savedRows[i]) {
-        const row = container.children[i];
-        if (!row) return;
-        const ta = row.querySelector('textarea');
-        if (ta && !ta.value) ta.value = savedRows[i].redesign;
-        const inp = row.querySelectorAll('.grid4 input');
-        if (inp[0] && !inp[0].value) inp[0].value = savedRows[i].responsible;
-        if (inp[1] && !inp[1].value) inp[1].value = savedRows[i].deadline;
-        if (inp[2] && !inp[2].value) inp[2].value = savedRows[i].kpi;
-        if (inp[3] && !inp[3].value) inp[3].value = savedRows[i].result;
-        const months = row.querySelectorAll('.month-item input');
-        savedRows[i].months.forEach((v,mi) => { if (months[mi] && !months[mi].value) months[mi].value = v; });
-      }
-    });
-    if (container.children.length === 0) addMonitor();
-  }
+  // 일반 빌드: 6단계에서 자동 연동 (항상 최신 내용 반영)
+  const savedRows = [...container.querySelectorAll('.monitor-row')].map(row => ({
+    redesign: row.querySelector('textarea')?.value||'',
+    responsible: row.querySelectorAll('.grid4 input')[0]?.value||'',
+    deadline: row.querySelectorAll('.grid4 input')[1]?.value||'',
+    kpi: row.querySelectorAll('.grid4 input')[2]?.value||'',
+    result: row.querySelectorAll('.grid4 input')[3]?.value||'',
+    months: [...row.querySelectorAll('.month-item input')].map(m=>m.value)
+  }));
+  container.innerHTML = '';
+  redesigns.forEach((item, i) => {
+    addMonitorFromRedesign(item);
+    // 기존에 직접 입력한 값 복원 (월별계획, 최종결과 등)
+    if (savedRows[i]) {
+      const row = container.children[i];
+      if (!row) return;
+      const inp = row.querySelectorAll('.grid4 input');
+      if (inp[3] && !inp[3].value) inp[3].value = savedRows[i].result;
+      const months = row.querySelectorAll('.month-item input');
+      savedRows[i].months.forEach((v,mi) => { if (months[mi] && !months[mi].value) months[mi].value = v; });
+    }
+  });
+  if (container.children.length === 0) addMonitor();
   goStep(8);
 }
 
