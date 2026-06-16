@@ -242,11 +242,12 @@
   /* Print styles */
   @media print {
     .sidebar, .topbar, .btn-row, .export-bar, .save-btns, button,
-    .proc-del, .proc-sub-del, .restore-banner, .progress-pill { display:none !important; }
+    .proc-del, .proc-sub-del, .restore-banner, .progress-pill,
+    .rpn-summary-card, #rpn-summary-card { display:none !important; }
     .main { margin-left:0 !important; }
-    .page-content { padding:10px !important; max-width:100% !important; }
+    .page-content { padding:4px 10px !important; max-width:100% !important; margin-top:0 !important; }
     .ws-section, .card { break-inside:avoid; box-shadow:none !important; border:1px solid #ccc !important; margin-bottom:8px !important; }
-    body { font-size:11pt; background:#fff; }
+    body { font-size:11pt; background:#fff; margin:0 !important; }
     .rpn-box, .why-box, .redesign-box, .paper-box { border:1px solid #ccc; }
     input[type=text], input[type=date], textarea, select {
       border:1px solid #ccc !important;
@@ -256,7 +257,21 @@
     }
     .app-shell { display:block !important; }
     .ws-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    /* 전체 출력 모드 */
+    body.print-mode .hidden { display:block !important; }
+    body.print-mode #step1, body.print-mode #step2, body.print-mode #step3,
+    body.print-mode #step4, body.print-mode #step5, body.print-mode #step6,
+    body.print-mode #step7, body.print-mode #step8 { display:block !important; }
+    body.print-mode .step-divider { display:block !important; border:none; border-top:2px solid #1a5fa8; margin:10px 0 4px; }
+    body.print-mode .step-print-title {
+      display:block !important; font-size:12pt; font-weight:bold;
+      color:#fff; background:#1a5fa8; padding:5px 10px; margin-bottom:8px;
+      break-after:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    body.print-mode .step-print-title + .card,
+    body.print-mode .step-print-title + div { break-before:avoid; }
   }
+  .step-divider, .step-print-title { display:none; }
 </style>
 </head>
 <body>
@@ -325,6 +340,7 @@
 
       <!-- STEP 1 -->
       <div id="step1">
+        <div class="step-print-title">1단계 — 고위험 프로세스 선정 · 팀 구성</div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">1단계 — FMEA 주제선정</div>
@@ -388,6 +404,8 @@
 
       <!-- STEP 2 -->
       <div id="step2" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">2단계 — 프로세스 검토 및 도식화</div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">2단계 — 프로세스 도식화</div>
@@ -405,6 +423,8 @@
 
       <!-- STEP 3 -->
       <div id="step3" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">3단계 — 잠재적 고장유형 분석</div>
         <div class="export-bar">
           <span class="bar-title">📝 3단계 — 고장유형 분석</span>
         </div>
@@ -425,6 +445,8 @@
 
       <!-- STEP 4 -->
       <div id="step4" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">4단계 — 고장유형 우선순위 선정 (RPN)</div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">4단계 — 우선순위 선정</div>
@@ -466,6 +488,8 @@
 
       <!-- STEP 5 -->
       <div id="step5" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">5단계 — 고장유형 근본원인 규명</div>
         <div class="export-bar" style="align-items:center;flex-wrap:wrap;">
           <span class="bar-title">🐟 원인 시각화</span>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -491,35 +515,16 @@
 
       <!-- STEP 6 -->
       <div id="step6" class="hidden">
-        <!-- 흐름도 카드 -->
+        <div class="step-divider"></div>
+        <div class="step-print-title">6단계 — 프로세스 재설계</div>
+        <!-- 개선 전/후 비교표 카드 -->
         <div class="card" id="flowchart-card">
           <div class="card-header">
-            <div class="card-eyebrow">6단계 — 프로세스 흐름도</div>
-            <div class="card-title">개선 전 · 후 프로세스 비교</div>
-            <div class="card-desc">개선 전 흐름도는 2단계 하부단계에서 자동 생성됩니다. 개선 후 흐름도를 직접 편집하세요.</div>
+            <div class="card-eyebrow">6단계 — 프로세스 비교</div>
+            <div class="card-title">개선 전 · 후 프로세스 단계 비교</div>
+            <div class="card-desc">개선 전은 2단계 하부단계에서 자동 생성됩니다. 개선 후 내용을 직접 입력하세요.</div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-            <!-- 개선 전 -->
-            <div>
-              <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:4px 10px;background:var(--red-light);border-radius:4px;display:inline-block;">개선 전</div>
-              <div id="flow-before" style="display:flex;flex-direction:column;align-items:center;gap:0;min-height:100px;"></div>
-            </div>
-            <!-- 개선 후 -->
-            <div>
-              <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:4px 10px;background:var(--green-light);border-radius:4px;display:inline-block;">개선 후</div>
-              <div id="flow-after" style="display:flex;flex-direction:column;align-items:center;gap:0;min-height:100px;"></div>
-              <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">
-                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','oval')">＋ 시작/끝</button>
-                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','rect')">＋ 단계</button>
-                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','diamond')">＋ 판단</button>
-              </div>
-            </div>
-          </div>
-          <!-- 전/후 비교표 -->
-          <div style="margin-top:20px;">
-            <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">📋 전 · 후 비교표</div>
-            <div id="flow-compare-table"></div>
-          </div>
+          <div id="flow-compare-table"></div>
         </div>
 
         <div class="card">
@@ -538,6 +543,8 @@
 
       <!-- STEP 7 -->
       <div id="step7" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">7단계 — 새로운 프로세스 분석·검증 (Paper Testing)</div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">7단계 — Paper Testing</div>
@@ -556,11 +563,29 @@
 
       <!-- STEP 8 -->
       <div id="step8" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">8단계 — 새로운 프로세스 적용 및 모니터링</div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">8단계 — 적용 및 모니터링</div>
             <div class="card-title">세부 계획 이행관리</div>
             <div class="card-desc">개선활동이 계획대로 이행되는지 월별로 점검합니다. 개선 종료 후 효과를 평가할 수 있는 지표모니터링을 시행합니다.</div>
+          </div>
+          <!-- 월 설정 -->
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0 4px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--gray-600);">시작 월:</label>
+              <select id="month-start" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
+                ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}">${m}월</option>`).join('')}
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--gray-600);">기간:</label>
+              <select id="month-count" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
+                ${[3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}"${n===6?' selected':''}>${n}개월</option>`).join('')}
+              </select>
+            </div>
+            <span style="font-size:12px;color:var(--gray-400);">※ 변경 시 모든 항목의 월 컬럼이 자동 조정됩니다</span>
           </div>
         </div>
         <div id="fmea-step8-container"></div>
@@ -569,7 +594,7 @@
           <span class="bar-title">📊 완료 — 데이터 내보내기</span>
           <button class="btn btn-ghost btn-sm" onclick="copyToSheet()">📋 구글 시트에 복사</button>
           <button class="btn btn-ghost btn-sm" onclick="downloadWord()">📄 Word 다운로드</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 PDF 출력</button>
+          <button class="btn btn-ghost btn-sm" onclick="printReport()">🖨 PDF 출력 (전체)</button>
         </div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goStep(7)">← 이전</button>
@@ -698,12 +723,33 @@ function initStep3() {
   const container = document.getElementById('fmea-step3-container');
   const subs = getSubSteps();
 
-  // 2단계에서 입력한 데이터가 있으면 자동 생성
-  if (subs.length > 0 && container.children.length === 0) {
-    subs.forEach(sub => { container.appendChild(buildStep3Item(sub)); });
+  if (subs.length > 0) {
+    // 2단계 항목 수와 다르면 새로 빌드 (기존 내용 유지하면서 헤더만 업데이트)
+    const existing = container.querySelectorAll('.ws-section');
+    if (existing.length === 0) {
+      // 처음 생성
+      subs.forEach(sub => { container.appendChild(buildStep3Item(sub)); });
+    } else {
+      // 이미 있으면 헤더 텍스트만 업데이트 (입력 내용 보존)
+      subs.forEach((sub, i) => {
+        const sec = existing[i];
+        if (!sec) {
+          container.appendChild(buildStep3Item(sub));
+          return;
+        }
+        // key, 단계명, 하부단계명 업데이트
+        sec.dataset.key = sub.key;
+        const stepSpan = sec.querySelector('.ws-step');
+        if (stepSpan) stepSpan.textContent = sub.key;
+        const inputs = sec.querySelectorAll('.ws-header input');
+        if (inputs[0] && !inputs[0].value) inputs[0].value = sub.stepName;
+        if (inputs[1] && !inputs[1].value) inputs[1].value = sub.subName;
+        // 하부단계명이 기본값이면 실제 값으로 교체
+        if (inputs[1] && inputs[1].value.startsWith('하부단계')) inputs[1].value = sub.subName;
+      });
+    }
   }
 
-  // 아무것도 없으면 기본 1개 생성
   if (container.children.length === 0) {
     container.appendChild(buildStep3Item({ key: '1-1', stepName: '단계 1', subName: '하부단계 1-1' }));
   }
@@ -727,10 +773,11 @@ function buildStep3Item(sub) {
   div.className = 'ws-section';
   div.dataset.key = sub.key;
   div.innerHTML = `
-    <div class="ws-header">
+    <div class="ws-header" style="position:relative;">
       <span class="ws-step">${sub.key}</span>
       <input style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.4);color:#fff;font-size:14px;font-weight:700;flex:1;font-family:inherit;padding:2px 4px;" placeholder="단계명" value="${sub.stepName}">
       <input style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.8);font-size:12px;flex:1.5;font-family:inherit;padding:2px 4px;" placeholder="하부단계 내용" value="${sub.subName}">
+      <button onclick="this.closest('.ws-section').remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;margin-left:8px;flex-shrink:0;">✕ 삭제</button>
     </div>
     <div class="ws-body">
       <div class="ws-row cols3">
@@ -746,14 +793,14 @@ function buildStep3Item(sub) {
 function addFailureMode(btn) {
   const body = btn.closest('.ws-body');
   const div = document.createElement('div');
-  div.style.marginTop = '10px';
-  div.style.paddingTop = '10px';
-  div.style.borderTop = '1px dashed var(--gray-200)';
-  div.innerHTML = `<div class="ws-row cols3">
-    <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="추가 고장유형"></textarea></div>
-    <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="추가 원인"></textarea></div>
-    <div class="ws-field"><label>잠재적 영향</label><textarea placeholder="추가 영향"></textarea></div>
-  </div>`;
+  div.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);position:relative;';
+  div.innerHTML = `
+    <button onclick="this.closest('div').remove()" style="position:absolute;top:8px;right:0;background:var(--red-light);border:none;color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕ 삭제</button>
+    <div class="ws-row cols3">
+      <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="추가 고장유형"></textarea></div>
+      <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="추가 원인"></textarea></div>
+      <div class="ws-field"><label>잠재적 영향</label><textarea placeholder="추가 영향"></textarea></div>
+    </div>`;
   body.insertBefore(div, btn);
 }
 
@@ -761,8 +808,22 @@ function addFailureMode(btn) {
 function buildStep4() {
   const container = document.getElementById('fmea-step4-container');
   const items = document.querySelectorAll('#fmea-step3-container .ws-section');
-  // 3단계 항목 수와 4단계 항목 수가 다르면 다시 빌드
-  if (container.children.length === items.length && container.children.length > 0) return;
+
+  // 이미 같은 수면 재빌드 안 하되, 이벤트 리스너는 항상 재연결
+  if (container.children.length === items.length && container.children.length > 0) {
+    container.querySelectorAll('.ws-section').forEach(div => {
+      div.querySelectorAll('.rpn-slider').forEach(sl => {
+        // 기존 리스너 제거 후 재연결 (cloneNode trick)
+        const newSl = sl.cloneNode(true);
+        sl.parentNode.replaceChild(newSl, sl);
+        newSl.addEventListener('input', () => updateRPN4(newSl));
+      });
+      // 초기 렌더링
+      setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
+    });
+    setTimeout(updateRPNSummary, 100);
+    return;
+  }
   // 기존 값 백업
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
@@ -778,8 +839,12 @@ function buildStep4() {
     const key = item.dataset.key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
     const headerInputs = item.querySelectorAll('.ws-header input');
-    const stepName = headerInputs[0]?.value || '단계';
-    const subName = headerInputs[1]?.value || '하부단계';
+    // 3단계 헤더: input[0]=단계명, input[1]=하부단계명
+    const rawStep = headerInputs[0]?.value || '';
+    const rawSub  = headerInputs[1]?.value || '';
+    // "단계 1" 같은 기본값 prefix 제거하고 실제 입력값만 사용
+    const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep || '단계';
+    const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub || '하부단계';
     const div = document.createElement('div');
     div.className = 'ws-section';
     div.dataset.key = key;
@@ -1035,8 +1100,10 @@ function buildStep5() {
     const key = item.dataset.key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
     const spans = item.querySelectorAll('.ws-header span');
-    const stepName = spans[1]?.textContent || '단계';
-    const subName = spans[2]?.textContent || '하부단계';
+    const rawStep = spans[1]?.textContent || '단계';
+    const rawSub  = spans[2]?.textContent || '하부단계';
+    const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep;
+    const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub;
     // RPN 점수도 가져와서 표시
     const sliders = item.querySelectorAll('input[type=range]');
     const s = sliders[0]?.value||'-', o = sliders[1]?.value||'-', d = sliders[2]?.value||'-';
@@ -1090,131 +1157,93 @@ function createWhyItem(key, stepName, subName, stepLabel, rpn, scope) {
   return div;
 }
 
-// ── 흐름도 함수 ──
+// ── 개선 전/후 비교표 ──
 function buildFlowchart() {
-  buildFlowBefore();
-  buildFlowAfter();
-  updateFlowCompare();
+  buildCompareTable();
 }
 
-function makeFlowNode(type, text, side) {
-  const wrap = document.createElement('div');
-  wrap.className = 'flow-node';
-
-  const boxWrap = document.createElement('div');
-  boxWrap.className = 'flow-box-wrap';
-
-  if (type === 'oval') {
-    boxWrap.innerHTML = `<div class="flow-oval"><input class="flow-edit" value="${text}" placeholder="내용 입력" onchange="updateFlowCompare()"></div>`;
-  } else if (type === 'rect') {
-    boxWrap.innerHTML = `<div class="flow-rect"><input class="flow-edit" value="${text}" placeholder="단계명 입력" onchange="updateFlowCompare()"></div>`;
-  } else if (type === 'diamond') {
-    boxWrap.innerHTML = `<div class="flow-diamond-wrap"><div class="flow-diamond"><div class="flow-diamond-text"><input class="flow-edit" value="${text}" placeholder="판단" onchange="updateFlowCompare()" style="width:56px;"></div></div></div>`;
-  }
-
-  if (side === 'after') {
-    const del = document.createElement('button');
-    del.className = 'flow-del-btn';
-    del.textContent = '×';
-    del.onclick = () => { wrap.remove(); updateFlowCompare(); };
-    boxWrap.appendChild(del);
-  }
-
-  wrap.appendChild(boxWrap);
-
-  const arrow = document.createElement('div');
-  arrow.className = 'flow-arrow';
-  arrow.textContent = '↓';
-  wrap.appendChild(arrow);
-
-  return wrap;
-}
-
-function buildFlowBefore() {
-  const container = document.getElementById('flow-before');
-  if (!container) return;
-  if (container.children.length > 0) return; // 이미 생성됨
-
-  const subs = getSubSteps();
-  // 시작 타원
-  container.appendChild(makeFlowNode('oval', '시작', 'before'));
-  if (subs.length > 0) {
-    subs.forEach(sub => {
-      container.appendChild(makeFlowNode('rect', sub.subName || sub.stepName, 'before'));
-    });
-  } else {
-    container.appendChild(makeFlowNode('rect', '프로세스 단계', 'before'));
-  }
-  // 끝 타원 (마지막 노드의 화살표 제거)
-  container.appendChild(makeFlowNode('oval', '끝', 'before'));
-  // 마지막 화살표 숨김
-  const nodes = container.querySelectorAll('.flow-node');
-  const lastArrow = nodes[nodes.length - 1].querySelector('.flow-arrow');
-  if (lastArrow) lastArrow.style.display = 'none';
-}
-
-function buildFlowAfter() {
-  const container = document.getElementById('flow-after');
-  if (!container) return;
-  if (container.children.length > 0) return;
-
-  const subs = getSubSteps();
-  container.appendChild(makeFlowNode('oval', '시작', 'after'));
-  if (subs.length > 0) {
-    subs.forEach(sub => {
-      container.appendChild(makeFlowNode('rect', sub.subName || sub.stepName, 'after'));
-    });
-  } else {
-    container.appendChild(makeFlowNode('rect', '개선된 단계', 'after'));
-  }
-  container.appendChild(makeFlowNode('oval', '끝', 'after'));
-  const nodes = container.querySelectorAll('.flow-node');
-  const lastArrow = nodes[nodes.length - 1].querySelector('.flow-arrow');
-  if (lastArrow) lastArrow.style.display = 'none';
-}
-
-function addFlowBox(side, type) {
-  const container = document.getElementById(`flow-${side}`);
-  if (!container) return;
-  const nodes = container.querySelectorAll('.flow-node');
-  // 끝 타원 앞에 삽입
-  const lastNode = nodes[nodes.length - 1];
-  // 이전 마지막 노드 화살표 복원
-  if (nodes.length > 0) {
-    const prevLast = nodes[nodes.length - 1];
-    const prevArrow = prevLast?.querySelector('.flow-arrow');
-    if (prevArrow) prevArrow.style.display = 'block';
-  }
-  const newNode = makeFlowNode(type, '', side);
-  container.insertBefore(newNode, lastNode);
-  newNode.querySelector('.flow-edit')?.focus();
-  updateFlowCompare();
-}
-
-function updateFlowCompare() {
+function buildCompareTable() {
   const tbl = document.getElementById('flow-compare-table');
   if (!tbl) return;
-  const getTexts = (id) => [...document.querySelectorAll(`#${id} .flow-edit`)].map(i => i.value.trim()).filter(v => v && v !== '시작' && v !== '끝');
-  const before = getTexts('flow-before');
-  const after  = getTexts('flow-after');
-  const maxLen = Math.max(before.length, after.length, 1);
+  if (tbl.dataset.built === '1') return; // 이미 만들어진 경우 유지
 
-  let html = `<table class="flow-compare-tbl">
+  const subs = getSubSteps();
+  const rows = subs.length > 0
+    ? subs.map(s => ({ before: s.subName || s.stepName, after: '' }))
+    : [{ before: '', after: '' }];
+
+  renderCompareTable(rows);
+  tbl.dataset.built = '1';
+}
+
+function renderCompareTable(rows) {
+  const tbl = document.getElementById('flow-compare-table');
+  if (!tbl) return;
+
+  let html = `
+  <table class="flow-compare-tbl" style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead><tr>
-      <th style="width:50%;color:var(--red);">🔴 개선 전</th>
-      <th style="width:50%;color:var(--green);">🟢 개선 후</th>
-    </tr></thead><tbody>`;
-  for (let i = 0; i < maxLen; i++) {
-    const b = before[i] || '';
-    const a = after[i] || '';
-    const changed = b !== a;
-    html += `<tr>
-      <td style="${b ? 'color:var(--red);' : 'color:var(--gray-300);'}">${b ? `${i+1}. ${b}` : '-'}</td>
-      <td style="${a ? (changed ? 'color:var(--green);font-weight:600;' : '') : 'color:var(--gray-300);'}">${a ? `${i+1}. ${a}${changed && b ? ' ✏️' : (b ? '' : ' 🆕')}` : '-'}</td>
+      <th style="width:40px;padding:8px;background:var(--gray-100);border:1px solid var(--gray-200);text-align:center;color:var(--gray-500);">No.</th>
+      <th style="padding:8px 12px;background:#fdf0f0;border:1px solid var(--gray-200);color:var(--red);font-weight:700;">🔴 개선 전</th>
+      <th style="padding:8px 12px;background:#e5f4ee;border:1px solid var(--gray-200);color:var(--green);font-weight:700;">🟢 개선 후</th>
+      <th style="width:40px;padding:8px;background:var(--gray-100);border:1px solid var(--gray-200);"></th>
+    </tr></thead>
+    <tbody id="compare-tbody">`;
+
+  rows.forEach((r, i) => {
+    html += `<tr data-idx="${i}">
+      <td style="padding:6px 8px;border:1px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:12px;">${i+1}</td>
+      <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#fdf8f8;">
+        <input type="text" value="${r.before}" placeholder="개선 전 단계 내용" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+      </td>
+      <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#f0faf4;">
+        <input type="text" value="${r.after}" placeholder="개선 후 단계 내용 입력" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+      </td>
+      <td style="padding:4px;border:1px solid var(--gray-200);text-align:center;">
+        <button onclick="delCompareRow(this)" style="background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:2px 6px;" title="행 삭제">✕</button>
+      </td>
     </tr>`;
-  }
-  html += '</tbody></table>';
+  });
+
+  html += `</tbody></table>
+  <div style="margin-top:8px;display:flex;gap:8px;">
+    <button class="btn btn-ghost btn-sm" onclick="addCompareRow()">＋ 행 추가</button>
+  </div>`;
+
   tbl.innerHTML = html;
+}
+
+function addCompareRow() {
+  const tbody = document.getElementById('compare-tbody');
+  if (!tbody) return;
+  const i = tbody.rows.length;
+  const tr = document.createElement('tr');
+  tr.dataset.idx = i;
+  tr.innerHTML = `
+    <td style="padding:6px 8px;border:1px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:12px;">${i+1}</td>
+    <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#fdf8f8;">
+      <input type="text" placeholder="개선 전 단계 내용" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+    </td>
+    <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#f0faf4;">
+      <input type="text" placeholder="개선 후 단계 내용 입력" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+    </td>
+    <td style="padding:4px;border:1px solid var(--gray-200);text-align:center;">
+      <button onclick="delCompareRow(this)" style="background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:2px 6px;" title="행 삭제">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('input').focus();
+}
+
+function delCompareRow(btn) {
+  const row = btn.closest('tr');
+  if (!row) return;
+  const tbody = document.getElementById('compare-tbody');
+  if (tbody.rows.length <= 1) return; // 최소 1행 유지
+  row.remove();
+  // 번호 재정렬
+  [...tbody.rows].forEach((r, i) => {
+    r.cells[0].textContent = i + 1;
+  });
 }
 
 // Step 6 — Redesign
@@ -1235,9 +1264,10 @@ function buildStep6() {
   items.forEach(item => {
     const key = item.dataset.key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-    const spans = item.querySelectorAll('.ws-header span, .ws-header input');
-    const stepName = item.querySelector('.ws-header span:nth-child(2)')?.textContent || key;
-    const subName = item.querySelector('.ws-header span:nth-child(3)')?.textContent || '';
+    const rawStep = item.querySelector('.ws-header span:nth-child(2)')?.textContent || key;
+    const rawSub  = item.querySelector('.ws-header span:nth-child(3)')?.textContent || '';
+    const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep;
+    const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub;
     const rootCause = item.querySelector('.root-cause-field input')?.value || '';
     const div = document.createElement('div');
     div.className = 'ws-section';
@@ -1306,10 +1336,11 @@ function buildStep7() {
   items.forEach(item => {
     const key = item.dataset.key || '1-1';
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-    // span에서 읽기 (6단계 헤더는 span)
     const headerSpans = item.querySelectorAll('.ws-header span');
-    const stepName = headerSpans[1]?.textContent || key;
-    const subName = headerSpans[2]?.textContent || '';
+    const rawStep = headerSpans[1]?.textContent || key;
+    const rawSub  = headerSpans[2]?.textContent || '';
+    const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep;
+    const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub;
 
     // 4단계 RPN 가져오기
     const beforeItem = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
@@ -1479,16 +1510,37 @@ function initStep8() {
   goStep(8);
 }
 
+// 월 라벨 생성 헬퍼
+function getMonthLabels() {
+  const start = parseInt(document.getElementById('month-start')?.value || 1);
+  const count = parseInt(document.getElementById('month-count')?.value || 6);
+  return Array.from({length: count}, (_, i) => ((start - 1 + i) % 12 + 1) + '월');
+}
+
+// 시작 월/기간 변경 시 월 그리드 재빌드
+function rebuildMonthGrids() {
+  const labels = getMonthLabels();
+  document.querySelectorAll('#fmea-step8-container .monitor-row').forEach(row => {
+    const grid = row.querySelector('.month-grid');
+    if (!grid) return;
+    const oldVals = [...grid.querySelectorAll('input')].map(i => i.value);
+    grid.innerHTML = labels.map((m, i) =>
+      `<div class="month-item"><label>${m}</label><input type="text" value="${oldVals[i]||''}" placeholder="세부계획"></div>`
+    ).join('');
+  });
+}
+
 function addMonitorFromRedesign(item) {
   const redesignText = item.querySelector('.redesign-box textarea')?.value || '';
   const inputs = item.querySelectorAll('.redesign-box input');
   const responsible = inputs[0]?.value || '';
-  const deadline = inputs[1]?.value || '';   // type=date 포함
+  const deadline = inputs[1]?.value || '';
   const indicator = inputs[2]?.value || '';
   const rootCause = item.querySelector('[style*="purple"]')?.textContent?.replace('근본원인: ','') || '';
   const stepLabel = item.querySelector('.ws-step')?.textContent || '';
-  const stepName = item.querySelector('.ws-header span:nth-child(2)')?.textContent || '';
-
+  const rawStep = item.querySelector('.ws-header span:nth-child(2)')?.textContent || '';
+  const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep;
+  const months = getMonthLabels();
   const container = document.getElementById('fmea-step8-container');
   const div = document.createElement('div');
   div.className = 'monitor-row';
@@ -1498,7 +1550,7 @@ function addMonitorFromRedesign(item) {
       ${rootCause ? `<span style="font-size:12px;color:var(--purple);font-weight:600;">근본원인: ${rootCause}</span>` : ''}
     </div>
     <div class="monitor-header">
-      <div class="ws-field" style="flex:1; margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;">${redesignText}</textarea></div>
+      <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;">${redesignText}</textarea></div>
     </div>
     <div class="grid4" style="margin-bottom:12px;margin-top:10px;">
       <div class="ws-field"><label>책임자</label><input type="text" value="${responsible}" placeholder="담당자"></div>
@@ -1508,18 +1560,19 @@ function addMonitorFromRedesign(item) {
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
     <div class="month-grid">
-      ${['1월','2월','3월','4월','5월','6월'].map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
+      ${months.map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
     </div>`;
   container.appendChild(div);
 }
 
 function addMonitor() {
   const container = document.getElementById('fmea-step8-container');
+  const months = getMonthLabels();
   const div = document.createElement('div');
   div.className = 'monitor-row';
   div.innerHTML = `
     <div class="monitor-header">
-      <div class="ws-field" style="flex:1; margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;" placeholder="개선활동 내용을 입력하세요."></textarea></div>
+      <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;" placeholder="개선활동 내용을 입력하세요."></textarea></div>
     </div>
     <div class="grid4" style="margin-bottom:12px;">
       <div class="ws-field"><label>책임자</label><input type="text" placeholder="담당자"></div>
@@ -1529,7 +1582,7 @@ function addMonitor() {
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
     <div class="month-grid">
-      ${['1월','2월','3월','4월','5월','6월'].map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
+      ${months.map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
     </div>`;
   container.appendChild(div);
 }
@@ -2026,6 +2079,27 @@ function copyToSheet() {
     document.body.removeChild(ta);
     alert('✅ 복사되었습니다! 구글 시트에서 Ctrl+V로 붙여넣으세요.');
   });
+}
+
+// 전체 PDF 출력
+function printReport() {
+  document.body.classList.add('print-mode');
+  for (let i = 1; i <= 8; i++) {
+    const el = document.getElementById('step' + i);
+    if (el) el.classList.remove('hidden');
+  }
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('print-mode');
+      const badge = document.getElementById('stepBadge');
+      const cur = badge ? parseInt(badge.textContent.split('/')[0].trim()) : 8;
+      for (let i = 1; i <= 8; i++) {
+        const el = document.getElementById('step' + i);
+        if (el && i !== cur) el.classList.add('hidden');
+      }
+    }, 500);
+  }, 300);
 }
 
 // Init step 2 on first load
