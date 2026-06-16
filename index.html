@@ -214,6 +214,24 @@
   .export-bar .bar-title { font-size:13px; font-weight:600; color:var(--gray-700); align-self:center; margin-right:auto; }
 
   /* Fishbone diagram */
+  /* Flowchart */
+  .flow-node { display:flex; flex-direction:column; align-items:center; width:100%; }
+  .flow-box-wrap { position:relative; width:90%; max-width:240px; }
+  .flow-oval { background:var(--blue-dark); color:#fff; border-radius:50px; padding:8px 16px; text-align:center; font-size:13px; font-weight:700; width:100%; box-sizing:border-box; }
+  .flow-rect { background:#fff; border:2px solid var(--blue); color:var(--gray-900); border-radius:6px; padding:8px 12px; text-align:center; font-size:13px; width:100%; box-sizing:border-box; }
+  .flow-diamond-wrap { width:100%; display:flex; justify-content:center; margin:6px 0; }
+  .flow-diamond { transform:rotate(45deg); width:76px; height:76px; background:#fff; border:2px solid var(--amber); display:flex; align-items:center; justify-content:center; }
+  .flow-diamond-text { transform:rotate(-45deg); font-size:11px; font-weight:700; color:var(--amber); text-align:center; width:68px; }
+  .flow-arrow { font-size:18px; color:var(--gray-400); line-height:1.2; margin:1px 0; text-align:center; }
+  .flow-del-btn { position:absolute; top:-7px; right:-7px; width:18px; height:18px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px; line-height:18px; text-align:center; display:none; z-index:2; padding:0; }
+  .flow-box-wrap:hover .flow-del-btn { display:block; }
+  .flow-edit { background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,0.5); color:inherit; font-size:inherit; font-weight:inherit; text-align:center; width:100%; font-family:inherit; outline:none; padding:0; }
+  .flow-rect .flow-edit { border-bottom-color:rgba(26,95,168,0.4); color:var(--gray-900); }
+  .flow-diamond-text .flow-edit { border-bottom-color:rgba(138,94,0,0.4); color:var(--amber); font-size:11px; width:60px; }
+  .flow-compare-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+  .flow-compare-tbl th { background:var(--gray-100); padding:7px 12px; font-weight:700; color:var(--gray-700); border:1px solid var(--gray-200); text-align:left; }
+  .flow-compare-tbl td { padding:7px 12px; border:1px solid var(--gray-200); vertical-align:top; line-height:1.8; }
+
   .fishbone-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
   .fishbone-wrap h3 { font-size:14px; font-weight:700; color:var(--gray-900); margin-bottom:16px; }
 
@@ -473,6 +491,37 @@
 
       <!-- STEP 6 -->
       <div id="step6" class="hidden">
+        <!-- 흐름도 카드 -->
+        <div class="card" id="flowchart-card">
+          <div class="card-header">
+            <div class="card-eyebrow">6단계 — 프로세스 흐름도</div>
+            <div class="card-title">개선 전 · 후 프로세스 비교</div>
+            <div class="card-desc">개선 전 흐름도는 2단계 하부단계에서 자동 생성됩니다. 개선 후 흐름도를 직접 편집하세요.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <!-- 개선 전 -->
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:4px 10px;background:var(--red-light);border-radius:4px;display:inline-block;">개선 전</div>
+              <div id="flow-before" style="display:flex;flex-direction:column;align-items:center;gap:0;min-height:100px;"></div>
+            </div>
+            <!-- 개선 후 -->
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:4px 10px;background:var(--green-light);border-radius:4px;display:inline-block;">개선 후</div>
+              <div id="flow-after" style="display:flex;flex-direction:column;align-items:center;gap:0;min-height:100px;"></div>
+              <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">
+                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','oval')">＋ 시작/끝</button>
+                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','rect')">＋ 단계</button>
+                <button class="btn btn-ghost btn-sm" onclick="addFlowBox('after','diamond')">＋ 판단</button>
+              </div>
+            </div>
+          </div>
+          <!-- 전/후 비교표 -->
+          <div style="margin-top:20px;">
+            <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">📋 전 · 후 비교표</div>
+            <div id="flow-compare-table"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">6단계 — 프로세스 재설계</div>
@@ -744,15 +793,15 @@ function buildStep4() {
           <div class="rpn-sliders">
             <div class="rpn-sl">
               <label>심각성 (S)</label>
-              <div class="sl-row"><input type="range" min="1" max="10" value="5" oninput="updateRPN4(this)"><span class="sl-val">5</span></div>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
             <div class="rpn-sl">
               <label>발생가능성 (O)</label>
-              <div class="sl-row"><input type="range" min="1" max="10" value="5" oninput="updateRPN4(this)"><span class="sl-val">5</span></div>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
             <div class="rpn-sl">
               <label>발견가능성 (D)</label>
-              <div class="sl-row"><input type="range" min="1" max="10" value="5" oninput="updateRPN4(this)"><span class="sl-val">5</span></div>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
           </div>
           <div class="rpn-result">
@@ -777,6 +826,10 @@ function buildStep4() {
         </div>
       </div>`;
     container.appendChild(div);
+    // 슬라이더 이벤트 리스너 직접 연결
+    div.querySelectorAll('.rpn-slider').forEach(sl => {
+      sl.addEventListener('input', () => updateRPN4(sl));
+    });
     // 이전 값 복원
     if (saved[key]) {
       const sl = div.querySelectorAll('input[type=range]');
@@ -824,6 +877,7 @@ function updateRPNSummary() {
   // 데이터 수집
   const rows = [];
   items.forEach(item => {
+    const key = item.dataset.key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || '';
     const spans = item.querySelectorAll('.ws-header span');
     const stepName = spans[1]?.textContent || '';
@@ -834,7 +888,7 @@ function updateRPNSummary() {
     const d = parseInt(sliders[2]?.value||5);
     const rpn = s * o * d;
     const scope = item.querySelector('select')?.value || '';
-    rows.push({ stepLabel, stepName, subName, s, o, d, rpn, scope });
+    rows.push({ key, stepLabel, stepName, subName, s, o, d, rpn, scope });
   });
 
   // RPN 높은 순 정렬
@@ -843,7 +897,8 @@ function updateRPNSummary() {
   const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
   const bgMap   = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
 
-  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  let html = `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 아래 표에서 <strong>선정 버튼</strong>을 클릭하면 해당 항목이 5단계(근본원인 규명) 대상으로 지정됩니다.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead>
       <tr style="background:var(--gray-100);">
         <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">순위</th>
@@ -852,7 +907,7 @@ function updateRPNSummary() {
         <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">O</th>
         <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">D</th>
         <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);">개선범위</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:120px;">개선범위 선정</th>
       </tr>
     </thead><tbody>`;
 
@@ -863,7 +918,15 @@ function updateRPNSummary() {
     else if (r.rpn >= 50) cls = 'mid';
     const rankBg = i === 0 ? '#1a5fa8' : i === 1 ? '#3b82f6' : i === 2 ? '#93c5fd' : 'var(--gray-300)';
     const rankColor = i < 3 ? '#fff' : 'var(--gray-700)';
-    html += `<tr style="border-bottom:1px solid var(--gray-100);">
+    const isSelected = r.scope === '선정 (개선활동 포함)';
+    const isConsider = r.scope === '고려대상 (심각성 8점 이상)';
+    const btnStyle = isSelected
+      ? 'background:#1a5fa8;color:#fff;border:1.5px solid #1a5fa8;'
+      : isConsider
+      ? 'background:#f59e0b;color:#fff;border:1.5px solid #f59e0b;'
+      : 'background:#fff;color:var(--gray-500);border:1.5px solid var(--gray-200);';
+    const btnText = isSelected ? '✅ 선정됨' : isConsider ? '⚠️ 고려대상' : '선정하기';
+    html += `<tr style="border-bottom:1px solid var(--gray-100);${isSelected?'background:#f0f7ff;':''}">
       <td style="padding:8px 10px;text-align:center;">
         <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:12px;font-weight:700;line-height:24px;">${i+1}</span>
       </td>
@@ -878,11 +941,31 @@ function updateRPNSummary() {
       <td style="padding:8px 10px;text-align:center;">
         <span style="font-size:16px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 10px;border-radius:4px;">${r.rpn}</span>
       </td>
-      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--gray-600);">${r.scope || '-'}</td>
+      <td style="padding:8px 10px;text-align:center;">
+        <button onclick="selectRPNItem('${r.key}', this)" style="padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;${btnStyle}">${btnText}</button>
+      </td>
     </tr>`;
   });
   html += '</tbody></table>';
   table.innerHTML = html;
+}
+
+function selectRPNItem(key, btn) {
+  // 해당 key의 4단계 카드 select 값 변경
+  const item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
+  if (!item) return;
+  const sel = item.querySelector('select');
+  if (!sel) return;
+  // 토글: 이미 선정이면 해제, 아니면 선정
+  if (sel.value === '선정 (개선활동 포함)') {
+    sel.value = '';
+  } else {
+    sel.value = '선정 (개선활동 포함)';
+    // 해당 카드로 스크롤
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  // 요약표 즉시 갱신
+  updateRPNSummary();
 }
 
 function buildStep5() {
@@ -984,8 +1067,136 @@ function createWhyItem(key, stepName, subName, stepLabel, rpn, scope) {
   return div;
 }
 
+// ── 흐름도 함수 ──
+function buildFlowchart() {
+  buildFlowBefore();
+  buildFlowAfter();
+  updateFlowCompare();
+}
+
+function makeFlowNode(type, text, side) {
+  const wrap = document.createElement('div');
+  wrap.className = 'flow-node';
+
+  const boxWrap = document.createElement('div');
+  boxWrap.className = 'flow-box-wrap';
+
+  if (type === 'oval') {
+    boxWrap.innerHTML = `<div class="flow-oval"><input class="flow-edit" value="${text}" placeholder="내용 입력" onchange="updateFlowCompare()"></div>`;
+  } else if (type === 'rect') {
+    boxWrap.innerHTML = `<div class="flow-rect"><input class="flow-edit" value="${text}" placeholder="단계명 입력" onchange="updateFlowCompare()"></div>`;
+  } else if (type === 'diamond') {
+    boxWrap.innerHTML = `<div class="flow-diamond-wrap"><div class="flow-diamond"><div class="flow-diamond-text"><input class="flow-edit" value="${text}" placeholder="판단" onchange="updateFlowCompare()" style="width:56px;"></div></div></div>`;
+  }
+
+  if (side === 'after') {
+    const del = document.createElement('button');
+    del.className = 'flow-del-btn';
+    del.textContent = '×';
+    del.onclick = () => { wrap.remove(); updateFlowCompare(); };
+    boxWrap.appendChild(del);
+  }
+
+  wrap.appendChild(boxWrap);
+
+  const arrow = document.createElement('div');
+  arrow.className = 'flow-arrow';
+  arrow.textContent = '↓';
+  wrap.appendChild(arrow);
+
+  return wrap;
+}
+
+function buildFlowBefore() {
+  const container = document.getElementById('flow-before');
+  if (!container) return;
+  if (container.children.length > 0) return; // 이미 생성됨
+
+  const subs = getSubSteps();
+  // 시작 타원
+  container.appendChild(makeFlowNode('oval', '시작', 'before'));
+  if (subs.length > 0) {
+    subs.forEach(sub => {
+      container.appendChild(makeFlowNode('rect', sub.subName || sub.stepName, 'before'));
+    });
+  } else {
+    container.appendChild(makeFlowNode('rect', '프로세스 단계', 'before'));
+  }
+  // 끝 타원 (마지막 노드의 화살표 제거)
+  container.appendChild(makeFlowNode('oval', '끝', 'before'));
+  // 마지막 화살표 숨김
+  const nodes = container.querySelectorAll('.flow-node');
+  const lastArrow = nodes[nodes.length - 1].querySelector('.flow-arrow');
+  if (lastArrow) lastArrow.style.display = 'none';
+}
+
+function buildFlowAfter() {
+  const container = document.getElementById('flow-after');
+  if (!container) return;
+  if (container.children.length > 0) return;
+
+  const subs = getSubSteps();
+  container.appendChild(makeFlowNode('oval', '시작', 'after'));
+  if (subs.length > 0) {
+    subs.forEach(sub => {
+      container.appendChild(makeFlowNode('rect', sub.subName || sub.stepName, 'after'));
+    });
+  } else {
+    container.appendChild(makeFlowNode('rect', '개선된 단계', 'after'));
+  }
+  container.appendChild(makeFlowNode('oval', '끝', 'after'));
+  const nodes = container.querySelectorAll('.flow-node');
+  const lastArrow = nodes[nodes.length - 1].querySelector('.flow-arrow');
+  if (lastArrow) lastArrow.style.display = 'none';
+}
+
+function addFlowBox(side, type) {
+  const container = document.getElementById(`flow-${side}`);
+  if (!container) return;
+  const nodes = container.querySelectorAll('.flow-node');
+  // 끝 타원 앞에 삽입
+  const lastNode = nodes[nodes.length - 1];
+  // 이전 마지막 노드 화살표 복원
+  if (nodes.length > 0) {
+    const prevLast = nodes[nodes.length - 1];
+    const prevArrow = prevLast?.querySelector('.flow-arrow');
+    if (prevArrow) prevArrow.style.display = 'block';
+  }
+  const newNode = makeFlowNode(type, '', side);
+  container.insertBefore(newNode, lastNode);
+  newNode.querySelector('.flow-edit')?.focus();
+  updateFlowCompare();
+}
+
+function updateFlowCompare() {
+  const tbl = document.getElementById('flow-compare-table');
+  if (!tbl) return;
+  const getTexts = (id) => [...document.querySelectorAll(`#${id} .flow-edit`)].map(i => i.value.trim()).filter(v => v && v !== '시작' && v !== '끝');
+  const before = getTexts('flow-before');
+  const after  = getTexts('flow-after');
+  const maxLen = Math.max(before.length, after.length, 1);
+
+  let html = `<table class="flow-compare-tbl">
+    <thead><tr>
+      <th style="width:50%;color:var(--red);">🔴 개선 전</th>
+      <th style="width:50%;color:var(--green);">🟢 개선 후</th>
+    </tr></thead><tbody>`;
+  for (let i = 0; i < maxLen; i++) {
+    const b = before[i] || '';
+    const a = after[i] || '';
+    const changed = b !== a;
+    html += `<tr>
+      <td style="${b ? 'color:var(--red);' : 'color:var(--gray-300);'}">${b ? `${i+1}. ${b}` : '-'}</td>
+      <td style="${a ? (changed ? 'color:var(--green);font-weight:600;' : '') : 'color:var(--gray-300);'}">${a ? `${i+1}. ${a}${changed && b ? ' ✏️' : (b ? '' : ' 🆕')}` : '-'}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  tbl.innerHTML = html;
+}
+
 // Step 6 — Redesign
 function buildStep6() {
+  buildFlowchart();
   const container = document.getElementById('fmea-step6-container');
   const items = document.querySelectorAll('#fmea-step5-container .ws-section');
   if (container.children.length === items.length && container.children.length > 0) return;
@@ -1115,9 +1326,9 @@ function buildStep7() {
             <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:8px;">개선 후 예상 RPN (Paper Testing)</div>
             <div class="paper-box" style="padding:12px 14px;">
               <div class="paper-sliders">
-                <div class="paper-sl"><label>심각성 (S)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterS}" oninput="updatePaperRPN(this)"><span class="sl-val">${afterS}</span></div></div>
-                <div class="paper-sl"><label>발생가능성 (O)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterO}" oninput="updatePaperRPN(this)"><span class="sl-val">${afterO}</span></div></div>
-                <div class="paper-sl"><label>발견가능성 (D)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterD}" oninput="updatePaperRPN(this)"><span class="sl-val">${afterD}</span></div></div>
+                <div class="paper-sl"><label>심각성 (S)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterS}" class="paper-slider"><span class="sl-val">${afterS}</span></div></div>
+                <div class="paper-sl"><label>발생가능성 (O)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterO}" class="paper-slider"><span class="sl-val">${afterO}</span></div></div>
+                <div class="paper-sl"><label>발견가능성 (D)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterD}" class="paper-slider"><span class="sl-val">${afterD}</span></div></div>
               </div>
               <div class="paper-result" style="margin-top:8px; padding:8px 10px; background:#fff; border-radius:var(--radius-sm); display:flex; align-items:center; gap:8px;">
                 <span style="font-size:13px; color:var(--gray-500);">개선 후 RPN =</span>
@@ -1128,6 +1339,9 @@ function buildStep7() {
         </div>
       </div>`;
     container.appendChild(div);
+    div.querySelectorAll('.paper-slider').forEach(sl => {
+      sl.addEventListener('input', () => updatePaperRPN(sl));
+    });
   });
 }
 
