@@ -779,19 +779,21 @@ function buildStep3Item(sub) {
   div.className = 'ws-section';
   div.dataset.key = sub.key;
   div.innerHTML = `
-    <div class="ws-header" style="position:relative;">
+    <div class="ws-header" style="position:relative;gap:8px;">
       <span class="ws-step">${sub.key}</span>
-      <input style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.4);color:#fff;font-size:14px;font-weight:700;flex:1;font-family:inherit;padding:2px 4px;" placeholder="단계명" value="${sub.stepName}">
-      <input style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.8);font-size:12px;flex:1.5;font-family:inherit;padding:2px 4px;" placeholder="하부단계 내용" value="${sub.subName}">
-      <button onclick="this.closest('.ws-section').remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;margin-left:8px;flex-shrink:0;">✕ 삭제</button>
+      <div style="display:flex;flex-direction:column;flex:1;gap:3px;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${sub.stepName}</span>
+        <input class="sub-name-input" style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.4);color:#fff;font-size:14px;font-weight:700;font-family:inherit;padding:2px 4px;width:100%;" placeholder="하부단계 내용" value="${sub.subName}">
+      </div>
+      <button onclick="this.closest('.ws-section').remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">✕ 삭제</button>
     </div>
     <div class="ws-body">
-      <div class="ws-row cols3">
+      <div class="ws-row cols3 failure-row-base">
         <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="이 단계에서 발생할 수 있는 오류나 실패&#10;예) 낙상 평가 누락"></textarea></div>
         <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="고장이 발생하는 가능한 원인&#10;예) 업무과중, 지식 부족"></textarea></div>
         <div class="ws-field"><label>잠재적 영향</label><textarea placeholder="고장 발생 시 환자/시스템에 미치는 영향&#10;예) 고위험군 낙상예방활동 못함"></textarea></div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="addFailureMode(this)" style="font-size:12px;">+ 고장유형 추가</button>
+      <button class="btn btn-ghost btn-sm" onclick="addFailureMode(this)" style="font-size:12px;margin-top:8px;">+ 고장유형 추가</button>
     </div>`;
   return div;
 }
@@ -799,9 +801,11 @@ function buildStep3Item(sub) {
 function addFailureMode(btn) {
   const body = btn.closest('.ws-body');
   const div = document.createElement('div');
-  div.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);position:relative;';
+  div.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);';
   div.innerHTML = `
-    <button onclick="this.closest('div').remove()" style="position:absolute;top:8px;right:0;background:var(--red-light);border:none;color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕ 삭제</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
+      <button onclick="this.closest('div').parentElement.remove()" style="background:var(--red-light);border:none;color:var(--red);border-radius:4px;padding:2px 10px;cursor:pointer;font-size:11px;font-weight:600;">✕ 이 행 삭제</button>
+    </div>
     <div class="ws-row cols3">
       <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="추가 고장유형"></textarea></div>
       <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="추가 원인"></textarea></div>
@@ -856,8 +860,10 @@ function buildStep4() {
     div.innerHTML = `
       <div class="ws-header">
         <span class="ws-step">${stepLabel}</span>
-        <span style="font-size:14px;font-weight:700;color:#fff;flex:1;">${stepName}</span>
-        <span style="font-size:12px;color:rgba(255,255,255,0.75);">${subName}</span>
+        <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${subName}</span>
+        </div>
       </div>
       <div class="ws-body">
         <div class="rpn-box">
@@ -935,14 +941,14 @@ function updateRPNSummary() {
   const items = document.querySelectorAll('#fmea-step4-container .ws-section');
   if (items.length === 0) { table.innerHTML = '<p style="color:var(--gray-400);font-size:13px;">슬라이더를 조작하면 자동으로 업데이트됩니다.</p>'; return; }
 
-  // 데이터 수집 (단계별 그룹핑)
-  const stepMap = {}; // stepKey → { stepName, subs: [{key, subName, s, o, d, rpn}], selected }
+  const stepMap = {};
+  const stepOrder = [];
   items.forEach(item => {
-    const key = item.dataset.key; // e.g. "1-1"
-    const stepKey = key.split('-')[0]; // "1"
-    const spans = item.querySelectorAll('.ws-header span');
-    const rawStep = spans[1]?.textContent || '';
-    const rawSub  = spans[2]?.textContent || '';
+    const key = item.dataset.key;
+    const stepKey = key.split('-')[0];
+    const headerDiv = item.querySelector('.ws-header > div');
+    const rawStep = headerDiv?.querySelector('span:first-child')?.textContent || '';
+    const rawSub  = headerDiv?.querySelector('span:last-child')?.textContent || '';
     const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep || ('단계'+stepKey);
     const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub;
     const sliders = item.querySelectorAll('.rpn-slider');
@@ -950,79 +956,73 @@ function updateRPNSummary() {
     const o = parseInt(sliders[1]?.value||5);
     const d = parseInt(sliders[2]?.value||5);
     const rpn = s * o * d;
-    if (!stepMap[stepKey]) stepMap[stepKey] = { stepName, stepKey, subs:[], ci:0, selected: false };
+    if (!stepMap[stepKey]) {
+      stepMap[stepKey] = { stepKey, stepName, subs:[], ci:0, selected: false };
+      stepOrder.push(stepKey);
+    }
     stepMap[stepKey].subs.push({ key, subName, s, o, d, rpn });
     stepMap[stepKey].ci += rpn;
-    // 선정 여부는 dataset에 저장
     if (item.dataset.selected === '1') stepMap[stepKey].selected = true;
   });
 
-  // CI 높은 순 정렬
-  const ciRows = Object.values(stepMap).sort((a,b) => b.ci - a.ci);
+  const ciSorted = [...stepOrder].sort((a,b) => stepMap[b].ci - stepMap[a].ci);
+  const ciRankMap = {};
+  ciSorted.forEach((k, i) => { ciRankMap[k] = i + 1; });
 
-  const colorBgs = ['#b03030','#c2410c','#8a5e00','#374151','#374151'];
   const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
   const bgMap    = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
+  const rankColors = ['#b03030','#c2410c','#8a5e00','#374151'];
 
-  // CI 뱃지
-  let ciHtml = `<div style="margin-bottom:14px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">📊 단계별 CI (Criticality Index = ΣRPN) — CI 높은 단계를 선정하세요</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">`;
-  ciRows.forEach((ci, i) => {
-    const bg = colorBgs[Math.min(i, colorBgs.length-1)];
-    const sel = ci.selected;
-    ciHtml += `<div onclick="selectStepCI('${ci.stepKey}')" style="background:${sel?bg:'#fff'};color:${sel?'#fff':bg};border:2px solid ${bg};border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;">
-      ${i+1}순위 <span style="font-size:11px;opacity:.85;">${ci.stepName}</span> CI = <span style="font-size:16px;">${ci.ci}</span>
-      ${sel ? ' ✅' : ''}
-    </div>`;
-  });
-  ciHtml += `</div>
-    <p style="font-size:12px;color:var(--gray-500);margin-top:8px;">💡 단계 뱃지를 클릭하면 해당 단계 전체(하부단계 포함)가 5단계 근본원인 분석 대상으로 지정됩니다.</p>
-  </div>`;
-
-  // 하부단계별 RPN 상세표
-  let html = ciHtml + `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead><tr style="background:var(--gray-100);">
-      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">순위</th>
       <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--gray-700);">단계 / 하부단계</th>
-      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">S</th>
-      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">O</th>
-      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">D</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">S</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">O</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">D</th>
       <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:80px;">CI 합계</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:90px;">단계 선정</th>
     </tr></thead><tbody>`;
 
-  // 모든 하부단계 RPN 내림차순
-  const allSubs = [];
-  ciRows.forEach(ci => ci.subs.forEach(s => allSubs.push({...s, stepName: ci.stepName, selected: ci.selected})));
-  allSubs.sort((a,b) => b.rpn - a.rpn);
-
-  allSubs.forEach((r, i) => {
-    let cls = 'low';
-    if (r.rpn >= 200) cls = 'critical';
-    else if (r.rpn >= 100) cls = 'high';
-    else if (r.rpn >= 50) cls = 'mid';
-    const rankBg = i===0?'#1a5fa8':i===1?'#3b82f6':i===2?'#93c5fd':'var(--gray-300)';
-    const rankColor = i<3?'#fff':'var(--gray-700)';
-    const rowBg = r.selected ? 'background:#f0f7ff;' : '';
-    html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">
-      <td style="padding:8px 10px;text-align:center;">
-        <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:12px;font-weight:700;line-height:24px;">${i+1}</span>
-      </td>
-      <td style="padding:8px 10px;">
-        <span style="font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:3px;margin-right:6px;">${r.key}</span>
-        <span style="font-weight:600;color:var(--gray-900);">${r.stepName}</span>
-        <span style="color:var(--gray-400);font-size:12px;margin-left:4px;">${r.subName}</span>
-        ${r.selected ? '<span style="font-size:11px;background:#1a5fa8;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;">✅ 선정</span>' : ''}
-      </td>
-      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.s}</td>
-      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.o}</td>
-      <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.d}</td>
-      <td style="padding:8px 10px;text-align:center;">
-        <span style="font-size:16px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 10px;border-radius:4px;">${r.rpn}</span>
-      </td>
-    </tr>`;
+  stepOrder.forEach(stepKey => {
+    const step = stepMap[stepKey];
+    const rank = ciRankMap[stepKey];
+    const rankBg = rankColors[Math.min(rank-1, rankColors.length-1)];
+    const sel = step.selected;
+    step.subs.forEach((sub, si) => {
+      let cls = 'low';
+      if (sub.rpn >= 200) cls = 'critical';
+      else if (sub.rpn >= 100) cls = 'high';
+      else if (sub.rpn >= 50) cls = 'mid';
+      const rowBg = sel ? 'background:#f0f7ff;' : '';
+      const isFirst = si === 0;
+      html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}${isFirst?'border-top:2px solid '+rankBg+';':''}">
+        <td style="padding:7px 10px;">
+          <span style="font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:3px;margin-right:5px;">${sub.key}</span>
+          <span style="font-size:11px;color:var(--gray-400);margin-right:4px;">${step.stepName}</span>
+          <span style="font-weight:600;color:var(--gray-900);">${sub.subName}</span>
+          ${sel?'<span style="font-size:10px;background:#1a5fa8;color:#fff;border-radius:3px;padding:1px 5px;margin-left:4px;">✅ 선정</span>':''}
+        </td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.s}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.o}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.d}</td>
+        <td style="padding:7px 10px;text-align:center;">
+          <span style="font-size:15px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 8px;border-radius:4px;">${sub.rpn}</span>
+        </td>
+        ${isFirst?`<td rowspan="${step.subs.length}" style="padding:7px 10px;text-align:center;vertical-align:middle;border-left:2px solid ${rankBg};">
+          <div style="font-size:15px;font-weight:900;color:${rankBg};">${step.ci}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">CI  ${rank}순위</div>
+        </td>
+        <td rowspan="${step.subs.length}" style="padding:7px 10px;text-align:center;vertical-align:middle;">
+          <button onclick="selectStepCI('${stepKey}')" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;width:74px;${sel?'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;':'background:#fff;color:var(--gray-500);border:2px solid var(--gray-200);'}">
+            ${sel?'✅ 선정됨':'선정하기'}
+          </button>
+        </td>`:''}
+      </tr>`;
+    });
   });
-  html += '</tbody></table>';
+
+  html += '</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 단계 선정 버튼 클릭 시 해당 단계 하부단계 전체가 5단계(근본원인 규명) 대상으로 지정됩니다.</p>';
   table.innerHTML = html;
 }
 
