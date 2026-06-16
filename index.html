@@ -544,6 +544,8 @@
             <div class="card-title">새로운 프로세스 분석·검증</div>
             <div class="card-desc">재설계된 프로세스를 적용했을 때 예상되는 개선 후 RPN을 재산정합니다. RPN이 상승한 항목은 근본원인 또는 개선계획을 재검토하세요.</div>
           </div>
+          <!-- CI 개선 전/후 비교표 -->
+          <div id="ci-compare-table"></div>
         </div>
         <div id="fmea-step7-container"></div>
         <div class="btn-row">
@@ -832,39 +834,39 @@ function buildStep4() {
     });
     // 이전 값 복원
     if (saved[key]) {
-      const sl = div.querySelectorAll('input[type=range]');
+      const sl = div.querySelectorAll('.rpn-slider');
       if (sl[0]) { sl[0].value = saved[key].s; sl[1].value = saved[key].o; sl[2].value = saved[key].d; }
       const sel = div.querySelector('select'); if (sel) sel.value = saved[key].scope;
       const pri = div.querySelector('input[type=text]'); if (pri) pri.value = saved[key].priority;
     }
-    setTimeout(() => updateRPN4(div.querySelector('input[type=range]')), 0);
+    setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
   });
   setTimeout(updateRPNSummary, 100);
 }
 
 function updateRPN4(slider) {
   const box = slider.closest('.rpn-box');
-  const sliders = box.querySelectorAll('input[type=range]');
+  if (!box) return;
+  const sliders = box.querySelectorAll('.rpn-slider');
+  if (sliders.length < 3) return;
   const s = parseInt(sliders[0].value), o = parseInt(sliders[1].value), d = parseInt(sliders[2].value);
   const rpn = s * o * d;
-  box.querySelectorAll('.sl-val')[0].textContent = s;
-  box.querySelectorAll('.sl-val')[1].textContent = o;
-  box.querySelectorAll('.sl-val')[2].textContent = d;
-  box.querySelector('.fs').textContent = s;
-  box.querySelector('.fo').textContent = o;
-  box.querySelector('.fd').textContent = d;
-  box.querySelector('.rpn-num').textContent = rpn;
+  const vals = box.querySelectorAll('.sl-val');
+  if (vals[0]) vals[0].textContent = s;
+  if (vals[1]) vals[1].textContent = o;
+  if (vals[2]) vals[2].textContent = d;
+  const fs = box.querySelector('.fs'); if (fs) fs.textContent = s;
+  const fo = box.querySelector('.fo'); if (fo) fo.textContent = o;
+  const fd = box.querySelector('.fd'); if (fd) fd.textContent = d;
+  const rpnNum = box.querySelector('.rpn-num'); if (rpnNum) rpnNum.textContent = rpn;
   let cls, label;
   if (rpn >= 200) { cls = 'critical'; label = '즉시 개선'; }
   else if (rpn >= 100) { cls = 'high'; label = '우선 개선'; }
   else if (rpn >= 50) { cls = 'mid'; label = '모니터링'; }
   else { cls = 'low'; label = '수용 가능'; }
-  const valEl = box.querySelector('.rpn-num');
+  if (rpnNum) rpnNum.className = `rpn-val ${cls}`;
   const badgeEl = box.querySelector('.rpn-badge-el');
-  valEl.className = `rpn-val ${cls}`;
-  badgeEl.className = `rpn-badge ${cls}`;
-  badgeEl.textContent = label;
-  // 요약표 갱신
+  if (badgeEl) { badgeEl.className = `rpn-badge ${cls}`; badgeEl.textContent = label; }
   updateRPNSummary();
 }
 
@@ -894,10 +896,31 @@ function updateRPNSummary() {
   // RPN 높은 순 정렬
   rows.sort((a, b) => b.rpn - a.rpn);
 
+  // step별 CI(RPN합계) 계산
+  const ciMap = {};
+  rows.forEach(r => {
+    const stepKey = r.stepLabel.split('-')[0]; // 1-1 → 1
+    if (!ciMap[stepKey]) ciMap[stepKey] = { name: r.stepName, total: 0 };
+    ciMap[stepKey].total += r.rpn;
+  });
+
   const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
   const bgMap   = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
 
-  let html = `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 아래 표에서 <strong>선정 버튼</strong>을 클릭하면 해당 항목이 5단계(근본원인 규명) 대상으로 지정됩니다.</p>
+  // CI 순위표 (단계별)
+  const ciRows = Object.entries(ciMap).sort((a,b) => b[1].total - a[1].total);
+  let ciHtml = `<div style="margin-bottom:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">📊 단계별 CI (Criticality Index = ΣRPN) — 높을수록 우선 개선 대상</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">`;
+  ciRows.forEach(([stepKey, ci], i) => {
+    const bg = i===0?'#b03030':i===1?'#c2410c':i===2?'#8a5e00':'#374151';
+    ciHtml += `<div style="background:${bg};color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;">
+      ${i+1}순위 <span style="font-size:11px;opacity:.85;">${ci.name||('단계'+stepKey)}</span> CI = <span style="font-size:16px;">${ci.total}</span>
+    </div>`;
+  });
+  ciHtml += `</div></div>`;
+
+  let html = ciHtml + `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 <strong>선정하기</strong> 버튼을 클릭하면 5단계(근본원인 규명) 대상으로 지정됩니다.</p>
   <table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead>
       <tr style="background:var(--gray-100);">
@@ -1319,7 +1342,7 @@ function buildStep7() {
             <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:8px;">개선 전 RPN</div>
             <div style="padding:12px 14px; background:var(--red-light); border-radius:var(--radius-sm); display:flex; align-items:center; gap:12px; border:1px solid rgba(176,48,48,0.2);">
               <span style="font-size:13px; color:var(--gray-600);">S:${beforeS} × O:${beforeO} × D:${beforeD}</span>
-              <span style="font-size:28px; font-weight:900; color:var(--red); margin-left:auto;">${beforeRPN}</span>
+              <span class="before-rpn-val" style="font-size:28px; font-weight:900; color:var(--red); margin-left:auto;">${beforeRPN}</span>
             </div>
           </div>
           <div>
@@ -1340,9 +1363,72 @@ function buildStep7() {
       </div>`;
     container.appendChild(div);
     div.querySelectorAll('.paper-slider').forEach(sl => {
-      sl.addEventListener('input', () => updatePaperRPN(sl));
+      sl.addEventListener('input', () => { updatePaperRPN(sl); updateCICompare(); });
     });
   });
+  updateCICompare();
+}
+
+function updateCICompare() {
+  const tbl = document.getElementById('ci-compare-table');
+  if (!tbl) return;
+  const step7Items = document.querySelectorAll('#fmea-step7-container .ws-section');
+  if (step7Items.length === 0) return;
+
+  // step별 before/after CI 계산
+  const ciMap = {};
+  step7Items.forEach(item => {
+    const key = item.dataset.key || '';
+    const stepKey = key.split('-')[0];
+    const spans = item.querySelectorAll('.ws-header span');
+    const stepName = spans[1]?.textContent || ('단계' + stepKey);
+
+    // 개선 전 RPN
+    const beforeRPN = parseInt(item.querySelector('.before-rpn-val')?.textContent || '0');
+    // 개선 후 RPN
+    const afterSliders = item.querySelectorAll('.paper-slider');
+    const afterRPN = afterSliders.length >= 3
+      ? parseInt(afterSliders[0].value) * parseInt(afterSliders[1].value) * parseInt(afterSliders[2].value)
+      : 0;
+
+    if (!ciMap[stepKey]) ciMap[stepKey] = { name: stepName, before: 0, after: 0 };
+    ciMap[stepKey].before += beforeRPN;
+    ciMap[stepKey].after  += afterRPN;
+  });
+
+  const ciRows = Object.entries(ciMap).sort((a,b) => b[1].before - a[1].before);
+  if (ciRows.length === 0) return;
+
+  let html = `<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">📊 개선 전/후 CI 비교 (CI = 단계별 ΣRPN)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:var(--gray-100);">
+        <th style="padding:7px 12px;text-align:left;font-weight:700;color:var(--gray-700);">단계</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:#b03030;width:100px;">개선 전 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:#0e6b4f;width:100px;">개선 후 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:var(--blue);width:120px;">개선 전-후 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:var(--gray-700);width:100px;">개선율</th>
+      </tr></thead><tbody>`;
+
+  ciRows.forEach(([stepKey, ci]) => {
+    const diff = ci.after - ci.before;
+    const rate = ci.before > 0 ? Math.round((1 - ci.after/ci.before)*100) : 0;
+    const diffColor = diff < 0 ? '#0e6b4f' : diff > 0 ? '#b03030' : '#374151';
+    const diffSign = diff > 0 ? '+' : '';
+    html += `<tr style="border-bottom:1px solid var(--gray-100);">
+      <td style="padding:8px 12px;font-weight:600;color:var(--gray-900);">${ci.name}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:#b03030;">${ci.before}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:#0e6b4f;">${ci.after}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:${diffColor};">${diffSign}${diff}</td>
+      <td style="padding:8px 12px;text-align:center;">
+        <span style="font-size:13px;font-weight:700;color:${rate>0?'#0e6b4f':'#b03030'};">
+          ${rate > 0 ? '▼' : rate < 0 ? '▲' : '―'} ${Math.abs(rate)}%
+        </span>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  tbl.innerHTML = html;
 }
 
 function updatePaperRPN(slider) {
