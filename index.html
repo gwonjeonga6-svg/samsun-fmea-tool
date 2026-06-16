@@ -268,15 +268,14 @@
       color:#fff; background:#1a5fa8; padding:5px 10px; margin-bottom:8px;
       break-after:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
-    /* 인쇄 시 슬라이더 숨기고 간결한 표시 */
+    /* 인쇄 시 슬라이더 숨기고 수식+값만 표시 */
     body.print-mode .rpn-sliders,
     body.print-mode .paper-sliders { display:none !important; }
-    body.print-mode .rpn-box::before,
-    body.print-mode .paper-box::before { display:none; }
-    /* 인쇄용 RPN 요약 표시 */
-    body.print-mode .rpn-result { border:1px solid #ccc; padding:4px 8px !important; }
-    body.print-mode .rpn-result .rpn-formula { font-size:10pt; }
-    body.print-mode .paper-result { border:1px solid #ccc; padding:4px 8px !important; }
+    body.print-mode .rpn-result,
+    body.print-mode .paper-result { border:1px solid #ccc !important; padding:6px 10px !important; border-radius:4px; }
+    body.print-mode .rpn-title { font-size:9pt !important; }
+    body.print-mode .step-print-title + .card,
+    body.print-mode .step-print-title + div { break-before:avoid; }
   }
   .step-divider, .step-print-title { display:none; }
 </style>
@@ -827,23 +826,30 @@ function getStepHeader(item) {
   const key = item.dataset.key || '';
   const stepLabel = item.querySelector('.ws-step')?.textContent || key;
   const headerDiv = item.querySelector('.ws-header > div');
-  const spans = headerDiv ? [...headerDiv.querySelectorAll('span')] : [];
 
   let stepName = '';
   let subName  = '';
 
-  // 3단계 구조: span(단계명) + input.sub-name-input(하부단계명)
-  const subInput = item.querySelector('.sub-name-input');
-  if (subInput !== null) {
-    stepName = spans[0]?.textContent || '';
-    subName  = subInput.value || '';
+  if (headerDiv) {
+    // 3단계: div > span(단계명) + input.sub-name-input
+    // 4·5·7단계: div > span[0](단계명) + span[1](하부단계명)
+    const subInput = item.querySelector('.sub-name-input');
+    const spans = [...headerDiv.querySelectorAll('span')];
+    if (subInput !== null) {
+      stepName = spans[0]?.textContent || '';
+      subName  = subInput.value || '';
+    } else {
+      stepName = spans[0]?.textContent || '';
+      subName  = spans[1]?.textContent || '';
+    }
   } else {
-    // 4~8단계 구조: span[0]=단계명, span[1]=하부단계명
-    stepName = spans[0]?.textContent || '';
-    subName  = spans[1]?.textContent || '';
+    // 6단계: ws-header > span(ws-step) + span(stepName) + span(subName) 평면 구조
+    const allSpans = [...item.querySelectorAll('.ws-header > span')];
+    // allSpans[0] = ws-step (key), [1] = stepName, [2] = subName
+    stepName = allSpans[1]?.textContent || '';
+    subName  = allSpans[2]?.textContent || '';
   }
 
-  // 기본값 prefix 제거
   stepName = stepName.replace(/^단계\s*\d+\s*/,'').trim() || stepName;
   subName  = subName.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || subName || key;
 
@@ -1837,7 +1843,22 @@ function restoreFMEA(data) {
     const c3 = document.getElementById('fmea-step3-container');
     c3.innerHTML = '';
     data.step3.forEach(item => {
-      const div = buildStep3Item({ key: item.key, stepName: item.stepName, subName: item.subName });
+      // 구버전 호환: stepName/subName이 비어있으면 2단계에서 찾기
+      let stepName = item.stepName || '';
+      let subName  = item.subName  || '';
+      // key로 2단계에서 단계명/하부단계명 찾기 (구버전 JSON 보완)
+      if (!stepName || !subName) {
+        const keyParts = (item.key||'').split('-');
+        const stepIdx = parseInt(keyParts[0]) - 1;
+        const subIdx  = parseInt(keyParts[1]) - 1;
+        const procItems = document.querySelectorAll('#process-steps-list .proc-item');
+        if (procItems[stepIdx]) {
+          stepName = stepName || procItems[stepIdx].querySelector('input')?.value || '';
+          const subInputs = procItems[stepIdx].querySelectorAll('.proc-sub-item input');
+          subName = subName || subInputs[subIdx]?.value || '';
+        }
+      }
+      const div = buildStep3Item({ key: item.key, stepName, subName });
       const body = div.querySelector('.ws-body');
       const addBtn = body.querySelector('.btn');
       const rows = div.querySelectorAll('.ws-row.cols3');
@@ -1849,12 +1870,20 @@ function restoreFMEA(data) {
         for (let i = 1; i < item.rows.length; i++) {
           const r = item.rows[i];
           const extra = document.createElement('div');
+          extra.className = 'extra-failure-row';
           extra.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);';
-          extra.innerHTML = `<div class="ws-row cols3">
-            <div class="ws-field"><label>잠재적 고장유형</label><textarea>${r.failure||''}</textarea></div>
-            <div class="ws-field"><label>잠재적 원인</label><textarea>${r.cause||''}</textarea></div>
-            <div class="ws-field"><label>잠재적 영향</label><textarea>${r.effect||''}</textarea></div>
-          </div>`;
+          extra.innerHTML = `
+            <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+              <button class="btn btn-sm" onclick="this.closest('.extra-failure-row').remove()"
+                style="background:var(--red-light);color:var(--red);border:1px solid var(--red);font-size:11px;padding:2px 10px;border-radius:4px;cursor:pointer;">
+                ✕ 이 행 삭제
+              </button>
+            </div>
+            <div class="ws-row cols3">
+              <div class="ws-field"><label>잠재적 고장유형</label><textarea>${r.failure||''}</textarea></div>
+              <div class="ws-field"><label>잠재적 원인</label><textarea>${r.cause||''}</textarea></div>
+              <div class="ws-field"><label>잠재적 영향</label><textarea>${r.effect||''}</textarea></div>
+            </div>`;
           body.insertBefore(extra, addBtn);
         }
       }
