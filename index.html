@@ -877,24 +877,13 @@ function buildStep4() {
             </div>
           </div>
           <div class="rpn-result">
-            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>)</div>
+            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>) &nbsp;<span style="font-size:10px;color:var(--gray-400);">※ 슬라이더 초기값 5×5×5=125</span></div>
             <div class="rpn-score-area">
               <span class="rpn-lbl">RPN</span>
               <span class="rpn-val mid rpn-num">125</span>
               <span class="rpn-badge mid rpn-badge-el">우선 개선</span>
             </div>
           </div>
-        </div>
-        <div class="ws-row cols2" style="margin-top:10px;">
-          <div class="ws-field"><label>개선활동 범위 결정</label>
-            <select>
-              <option value="">선택</option>
-              <option>선정 (개선활동 포함)</option>
-              <option>고려대상 (심각성 8점 이상)</option>
-              <option>미선정</option>
-            </select>
-          </div>
-          <div class="ws-field"><label>우선순위</label><input type="text" placeholder="예) 1순위, 2순위..."></div>
         </div>
       </div>`;
     container.appendChild(div);
@@ -946,87 +935,84 @@ function updateRPNSummary() {
   const items = document.querySelectorAll('#fmea-step4-container .ws-section');
   if (items.length === 0) { table.innerHTML = '<p style="color:var(--gray-400);font-size:13px;">슬라이더를 조작하면 자동으로 업데이트됩니다.</p>'; return; }
 
-  // 데이터 수집
-  const rows = [];
+  // 데이터 수집 (단계별 그룹핑)
+  const stepMap = {}; // stepKey → { stepName, subs: [{key, subName, s, o, d, rpn}], selected }
   items.forEach(item => {
-    const key = item.dataset.key;
-    const stepLabel = item.querySelector('.ws-step')?.textContent || '';
+    const key = item.dataset.key; // e.g. "1-1"
+    const stepKey = key.split('-')[0]; // "1"
     const spans = item.querySelectorAll('.ws-header span');
-    const stepName = spans[1]?.textContent || '';
-    const subName = spans[2]?.textContent || '';
-    const sliders = item.querySelectorAll('input[type=range]');
+    const rawStep = spans[1]?.textContent || '';
+    const rawSub  = spans[2]?.textContent || '';
+    const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep || ('단계'+stepKey);
+    const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub;
+    const sliders = item.querySelectorAll('.rpn-slider');
     const s = parseInt(sliders[0]?.value||5);
     const o = parseInt(sliders[1]?.value||5);
     const d = parseInt(sliders[2]?.value||5);
     const rpn = s * o * d;
-    const scope = item.querySelector('select')?.value || '';
-    rows.push({ key, stepLabel, stepName, subName, s, o, d, rpn, scope });
+    if (!stepMap[stepKey]) stepMap[stepKey] = { stepName, stepKey, subs:[], ci:0, selected: false };
+    stepMap[stepKey].subs.push({ key, subName, s, o, d, rpn });
+    stepMap[stepKey].ci += rpn;
+    // 선정 여부는 dataset에 저장
+    if (item.dataset.selected === '1') stepMap[stepKey].selected = true;
   });
 
-  // RPN 높은 순 정렬
-  rows.sort((a, b) => b.rpn - a.rpn);
+  // CI 높은 순 정렬
+  const ciRows = Object.values(stepMap).sort((a,b) => b.ci - a.ci);
 
-  // step별 CI(RPN합계) 계산
-  const ciMap = {};
-  rows.forEach(r => {
-    const stepKey = r.stepLabel.split('-')[0]; // 1-1 → 1
-    if (!ciMap[stepKey]) ciMap[stepKey] = { name: r.stepName, total: 0 };
-    ciMap[stepKey].total += r.rpn;
-  });
-
+  const colorBgs = ['#b03030','#c2410c','#8a5e00','#374151','#374151'];
   const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
-  const bgMap   = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
+  const bgMap    = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
 
-  // CI 순위표 (단계별)
-  const ciRows = Object.entries(ciMap).sort((a,b) => b[1].total - a[1].total);
-  let ciHtml = `<div style="margin-bottom:12px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">📊 단계별 CI (Criticality Index = ΣRPN) — 높을수록 우선 개선 대상</div>
+  // CI 뱃지
+  let ciHtml = `<div style="margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">📊 단계별 CI (Criticality Index = ΣRPN) — CI 높은 단계를 선정하세요</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">`;
-  ciRows.forEach(([stepKey, ci], i) => {
-    const bg = i===0?'#b03030':i===1?'#c2410c':i===2?'#8a5e00':'#374151';
-    ciHtml += `<div style="background:${bg};color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;">
-      ${i+1}순위 <span style="font-size:11px;opacity:.85;">${ci.name||('단계'+stepKey)}</span> CI = <span style="font-size:16px;">${ci.total}</span>
+  ciRows.forEach((ci, i) => {
+    const bg = colorBgs[Math.min(i, colorBgs.length-1)];
+    const sel = ci.selected;
+    ciHtml += `<div onclick="selectStepCI('${ci.stepKey}')" style="background:${sel?bg:'#fff'};color:${sel?'#fff':bg};border:2px solid ${bg};border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;">
+      ${i+1}순위 <span style="font-size:11px;opacity:.85;">${ci.stepName}</span> CI = <span style="font-size:16px;">${ci.ci}</span>
+      ${sel ? ' ✅' : ''}
     </div>`;
   });
-  ciHtml += `</div></div>`;
+  ciHtml += `</div>
+    <p style="font-size:12px;color:var(--gray-500);margin-top:8px;">💡 단계 뱃지를 클릭하면 해당 단계 전체(하부단계 포함)가 5단계 근본원인 분석 대상으로 지정됩니다.</p>
+  </div>`;
 
-  let html = ciHtml + `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 <strong>선정하기</strong> 버튼을 클릭하면 5단계(근본원인 규명) 대상으로 지정됩니다. &nbsp;<span style="color:var(--amber);font-weight:600;">※ RPN 125는 슬라이더 초기값(S5×O5×D5)입니다. 각 슬라이더를 조작하면 실제 점수로 업데이트됩니다.</span></p>
-  <table style="width:100%;border-collapse:collapse;font-size:13px;">
-    <thead>
-      <tr style="background:var(--gray-100);">
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">순위</th>
-        <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--gray-700);">단계 / 하부단계</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">S</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">O</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">D</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
-        <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:120px;">개선범위 선정</th>
-      </tr>
-    </thead><tbody>`;
+  // 하부단계별 RPN 상세표
+  let html = ciHtml + `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="background:var(--gray-100);">
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">순위</th>
+      <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--gray-700);">단계 / 하부단계</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">S</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">O</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:40px;">D</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
+    </tr></thead><tbody>`;
 
-  rows.forEach((r, i) => {
+  // 모든 하부단계 RPN 내림차순
+  const allSubs = [];
+  ciRows.forEach(ci => ci.subs.forEach(s => allSubs.push({...s, stepName: ci.stepName, selected: ci.selected})));
+  allSubs.sort((a,b) => b.rpn - a.rpn);
+
+  allSubs.forEach((r, i) => {
     let cls = 'low';
     if (r.rpn >= 200) cls = 'critical';
     else if (r.rpn >= 100) cls = 'high';
     else if (r.rpn >= 50) cls = 'mid';
-    const rankBg = i === 0 ? '#1a5fa8' : i === 1 ? '#3b82f6' : i === 2 ? '#93c5fd' : 'var(--gray-300)';
-    const rankColor = i < 3 ? '#fff' : 'var(--gray-700)';
-    const isSelected = r.scope === '선정 (개선활동 포함)';
-    const isConsider = r.scope === '고려대상 (심각성 8점 이상)';
-    const btnStyle = isSelected
-      ? 'background:#1a5fa8;color:#fff;border:1.5px solid #1a5fa8;'
-      : isConsider
-      ? 'background:#f59e0b;color:#fff;border:1.5px solid #f59e0b;'
-      : 'background:#fff;color:var(--gray-500);border:1.5px solid var(--gray-200);';
-    const btnText = isSelected ? '✅ 선정됨' : isConsider ? '⚠️ 고려대상' : '선정하기';
-    html += `<tr style="border-bottom:1px solid var(--gray-100);${isSelected?'background:#f0f7ff;':''}">
+    const rankBg = i===0?'#1a5fa8':i===1?'#3b82f6':i===2?'#93c5fd':'var(--gray-300)';
+    const rankColor = i<3?'#fff':'var(--gray-700)';
+    const rowBg = r.selected ? 'background:#f0f7ff;' : '';
+    html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">
       <td style="padding:8px 10px;text-align:center;">
         <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:12px;font-weight:700;line-height:24px;">${i+1}</span>
       </td>
       <td style="padding:8px 10px;">
-        <span style="font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:3px;margin-right:6px;">${r.stepLabel}</span>
+        <span style="font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue);padding:2px 6px;border-radius:3px;margin-right:6px;">${r.key}</span>
         <span style="font-weight:600;color:var(--gray-900);">${r.stepName}</span>
         <span style="color:var(--gray-400);font-size:12px;margin-left:4px;">${r.subName}</span>
+        ${r.selected ? '<span style="font-size:11px;background:#1a5fa8;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;">✅ 선정</span>' : ''}
       </td>
       <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.s}</td>
       <td style="padding:8px 10px;text-align:center;color:var(--gray-700);">${r.o}</td>
@@ -1034,25 +1020,26 @@ function updateRPNSummary() {
       <td style="padding:8px 10px;text-align:center;">
         <span style="font-size:16px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 10px;border-radius:4px;">${r.rpn}</span>
       </td>
-      <td style="padding:8px 10px;text-align:center;">
-        <button onclick="selectRPNItem('${r.key}', this)" style="padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;${btnStyle}">${btnText}</button>
-      </td>
     </tr>`;
   });
   html += '</tbody></table>';
   table.innerHTML = html;
 }
 
-function selectRPNItem(key, btn) {
-  const item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
-  if (!item) return;
-  const sel = item.querySelector('select');
-  if (!sel) return;
-  if (sel.value === '선정 (개선활동 포함)') {
-    sel.value = '';
-  } else {
-    sel.value = '선정 (개선활동 포함)';
-  }
+function selectStepCI(stepKey) {
+  // 해당 단계 하부단계 전체에 dataset.selected 토글
+  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
+  let anySelected = false;
+  items.forEach(item => {
+    const k = item.dataset.key.split('-')[0];
+    if (k === stepKey && item.dataset.selected === '1') anySelected = true;
+  });
+  items.forEach(item => {
+    const k = item.dataset.key.split('-')[0];
+    if (k === stepKey) {
+      item.dataset.selected = anySelected ? '0' : '1';
+    }
+  });
   updateRPNSummary();
 }
 
@@ -1060,11 +1047,17 @@ function buildStep5() {
   const container = document.getElementById('fmea-step5-container');
   const allItems = document.querySelectorAll('#fmea-step4-container .ws-section');
 
-  // 4단계에서 "선정" 또는 "고려대상"으로 체크된 항목만 필터링
-  const selectedItems = [...allItems].filter(item => {
-    const scope = item.querySelector('select')?.value || '';
-    return scope === '선정 (개선활동 포함)' || scope === '고려대상 (심각성 8점 이상)';
+  // 4단계에서 선정된 단계(dataset.selected=1)의 하부단계만 필터링
+  const selectedStepKeys = new Set();
+  [...document.querySelectorAll('#fmea-step4-container .ws-section')].forEach(item => {
+    if (item.dataset.selected === '1') {
+      selectedStepKeys.add(item.dataset.key.split('-')[0]);
+    }
   });
+
+  const selectedItems = selectedStepKeys.size > 0
+    ? [...allItems].filter(item => selectedStepKeys.has(item.dataset.key.split('-')[0]))
+    : [];
 
   // 선정 항목이 없으면 전체 사용 (선택 안 한 경우 대비)
   const items = selectedItems.length > 0 ? selectedItems : [...allItems];
