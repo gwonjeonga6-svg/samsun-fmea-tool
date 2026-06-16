@@ -815,23 +815,31 @@ function addFailureMode(btn) {
   body.insertBefore(wrap, btn);
 }
 
-// ── 공통 헬퍼: 3단계 ws-section에서 단계명/하부단계명 읽기 ──
+// ── 공통 헬퍼: ws-section에서 단계명/하부단계명 읽기 ──
 function getStepHeader(item) {
   const key = item.dataset.key || '';
   const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-  // 3단계 구조: div > span(단계명) + input.sub-name-input(하부단계명)
   const headerDiv = item.querySelector('.ws-header > div');
-  const stepNameSpan = headerDiv?.querySelector('span:first-child');
+  const spans = headerDiv ? [...headerDiv.querySelectorAll('span')] : [];
+
+  let stepName = '';
+  let subName  = '';
+
+  // 3단계 구조: span(단계명) + input.sub-name-input(하부단계명)
   const subInput = item.querySelector('.sub-name-input');
-  // 4~8단계 구조: div > span:first(단계명) + span:last(하부단계명)
-  const stepNameSpan2 = headerDiv?.querySelectorAll('span')[0];
-  const subNameSpan   = headerDiv?.querySelectorAll('span')[1];
+  if (subInput !== null) {
+    stepName = spans[0]?.textContent || '';
+    subName  = subInput.value || '';
+  } else {
+    // 4~8단계 구조: span[0]=단계명, span[1]=하부단계명
+    stepName = spans[0]?.textContent || '';
+    subName  = spans[1]?.textContent || '';
+  }
 
-  let rawStep = stepNameSpan?.textContent || stepNameSpan2?.textContent || '';
-  let rawSub  = subInput?.value || subNameSpan?.textContent || '';
+  // 기본값 prefix 제거
+  stepName = stepName.replace(/^단계\s*\d+\s*/,'').trim() || stepName;
+  subName  = subName.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || subName || key;
 
-  const stepName = rawStep.replace(/^단계\s*\d+\s*/,'').trim() || rawStep || '';
-  const subName  = rawSub.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || rawSub || key;
   return { key, stepLabel, stepName, subName };
 }
 
