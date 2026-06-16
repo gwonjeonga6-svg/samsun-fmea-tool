@@ -1509,9 +1509,39 @@ function updatePaperRPN(slider) {
 function initStep8() {
   const container = document.getElementById('fmea-step8-container');
   const redesigns = document.querySelectorAll('#fmea-step6-container .ws-section');
-  // 6단계 항목 수와 다르면 다시 빌드
+
+  // JSON 불러오기로 복원된 데이터가 있으면 우선 사용
+  if (window._savedStep8 && window._savedStep8.length > 0) {
+    container.innerHTML = '';
+    const months = getMonthLabels();
+    window._savedStep8.forEach(sd => {
+      const div = document.createElement('div');
+      div.className = 'monitor-row';
+      div.innerHTML = `
+        <div class="monitor-header">
+          <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label>
+            <textarea style="min-height:50px;">${sd.redesign||''}</textarea>
+          </div>
+        </div>
+        <div class="grid4" style="margin-bottom:12px;margin-top:10px;">
+          <div class="ws-field"><label>책임자</label><input type="text" value="${sd.responsible||''}" placeholder="담당자"></div>
+          <div class="ws-field"><label>완료예정일</label><input type="text" value="${sd.deadline||''}" placeholder="완료일"></div>
+          <div class="ws-field"><label>평가지표</label><input type="text" value="${sd.kpi||''}" placeholder="지표명"></div>
+          <div class="ws-field"><label>최종결과</label><input type="text" value="${sd.result||''}" placeholder="결과 확인"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
+        <div class="month-grid">
+          ${months.map((m,mi) => `<div class="month-item"><label>${m}</label><input type="text" value="${(sd.months||[])[mi]||''}" placeholder="세부계획"></div>`).join('')}
+        </div>`;
+      container.appendChild(div);
+    });
+    window._savedStep8 = null;
+    goStep(8);
+    return;
+  }
+
+  // 일반 빌드: 6단계에서 자동 연동
   if (container.children.length !== redesigns.length || container.children.length === 0) {
-    // 기존 값 백업
     const savedRows = [...container.querySelectorAll('.monitor-row')].map(row => ({
       redesign: row.querySelector('textarea')?.value||'',
       responsible: row.querySelectorAll('.grid4 input')[0]?.value||'',
@@ -1523,7 +1553,6 @@ function initStep8() {
     container.innerHTML = '';
     redesigns.forEach((item, i) => {
       addMonitorFromRedesign(item);
-      // 기존 값 복원
       if (savedRows[i]) {
         const row = container.children[i];
         if (!row) return;
