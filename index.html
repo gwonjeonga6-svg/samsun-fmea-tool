@@ -576,13 +576,19 @@
             <div style="display:flex;align-items:center;gap:8px;">
               <label style="font-size:12px;font-weight:700;color:var(--gray-600);">시작 월:</label>
               <select id="month-start" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
-                ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}">${m}월</option>`).join('')}
+                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
               </select>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <label style="font-size:12px;font-weight:700;color:var(--gray-600);">기간:</label>
               <select id="month-count" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
-                ${[3,4,5,6,7,8,9,10,11,12].map(n=>`<option value="${n}"${n===6?' selected':''}>${n}개월</option>`).join('')}
+                <option value="3">3개월</option><option value="4">4개월</option><option value="5">5개월</option>
+                <option value="6" selected>6개월</option><option value="7">7개월</option><option value="8">8개월</option>
+                <option value="9">9개월</option><option value="10">10개월</option><option value="11">11개월</option>
+                <option value="12">12개월</option>
               </select>
             </div>
             <span style="font-size:12px;color:var(--gray-400);">※ 변경 시 모든 항목의 월 컬럼이 자동 조정됩니다</span>
@@ -813,13 +819,12 @@ function buildStep4() {
   if (container.children.length === items.length && container.children.length > 0) {
     container.querySelectorAll('.ws-section').forEach(div => {
       div.querySelectorAll('.rpn-slider').forEach(sl => {
-        // 기존 리스너 제거 후 재연결 (cloneNode trick)
-        const newSl = sl.cloneNode(true);
-        sl.parentNode.replaceChild(newSl, sl);
-        newSl.addEventListener('input', () => updateRPN4(newSl));
+        // oninput 속성 방식으로 재설정 (가장 확실)
+        sl.oninput = function() { updateRPN4(this); };
       });
-      // 초기 렌더링
-      setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
+      // 현재 값으로 즉시 렌더링
+      const firstSl = div.querySelector('.rpn-slider');
+      if (firstSl) updateRPN4(firstSl);
     });
     setTimeout(updateRPNSummary, 100);
     return;
@@ -893,9 +898,9 @@ function buildStep4() {
         </div>
       </div>`;
     container.appendChild(div);
-    // 슬라이더 이벤트 리스너 직접 연결
+    // 슬라이더 oninput 직접 설정
     div.querySelectorAll('.rpn-slider').forEach(sl => {
-      sl.addEventListener('input', () => updateRPN4(sl));
+      sl.oninput = function() { updateRPN4(this); };
     });
     // 이전 값 복원
     if (saved[key]) {
@@ -985,7 +990,7 @@ function updateRPNSummary() {
   });
   ciHtml += `</div></div>`;
 
-  let html = ciHtml + `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 <strong>선정하기</strong> 버튼을 클릭하면 5단계(근본원인 규명) 대상으로 지정됩니다.</p>
+  let html = ciHtml + `<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">💡 <strong>선정하기</strong> 버튼을 클릭하면 5단계(근본원인 규명) 대상으로 지정됩니다. &nbsp;<span style="color:var(--amber);font-weight:600;">※ RPN 125는 슬라이더 초기값(S5×O5×D5)입니다. 각 슬라이더를 조작하면 실제 점수로 업데이트됩니다.</span></p>
   <table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead>
       <tr style="background:var(--gray-100);">
@@ -1039,20 +1044,15 @@ function updateRPNSummary() {
 }
 
 function selectRPNItem(key, btn) {
-  // 해당 key의 4단계 카드 select 값 변경
   const item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
   if (!item) return;
   const sel = item.querySelector('select');
   if (!sel) return;
-  // 토글: 이미 선정이면 해제, 아니면 선정
   if (sel.value === '선정 (개선활동 포함)') {
     sel.value = '';
   } else {
     sel.value = '선정 (개선활동 포함)';
-    // 해당 카드로 스크롤
-    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  // 요약표 즉시 갱신
   updateRPNSummary();
 }
 
