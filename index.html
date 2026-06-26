@@ -268,9 +268,24 @@
       break-after:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
     /* 4단계: 개별 슬라이더 카드 숨기고 순위표만 출력 */
+    /* 4단계: 점수기준표·슬라이더 카드 숨기고 인쇄용 표 표시 */
     body.print-mode #fmea-step4-container { display:none !important; }
-    body.print-mode #rpn-summary-card { display:block !important; box-shadow:none !important; }
-    body.print-mode #rpn-summary-card button { display:none !important; }
+    body.print-mode #step4-score-guide { display:none !important; }
+    body.print-mode #rpn-summary-card { display:none !important; }
+    body.print-mode #step4-print-table { display:block !important; }
+    body.print-mode #step4-print-table table { width:100%; border-collapse:collapse; font-size:9pt; }
+    body.print-mode #step4-print-table th { background:#1a5fa8; color:#fff; padding:5px 7px; text-align:left; font-weight:700; border:1px solid #1a5fa8; }
+    body.print-mode #step4-print-table td { padding:4px 7px; border:1px solid #dde1e9; vertical-align:middle; line-height:1.4; }
+    body.print-mode #step4-print-table .sub-cell { background:#eaf1fb; font-weight:700; color:#1a5fa8; }
+    /* 5단계 인쇄용 표 */
+    body.print-mode #fmea-step5-container { display:none !important; }
+    body.print-mode #fishbone-container { display:none !important; }
+    body.print-mode .export-bar { display:none !important; }
+    body.print-mode #step5-print-table { display:block !important; }
+    body.print-mode #step5-print-table table { width:100%; border-collapse:collapse; font-size:9pt; }
+    body.print-mode #step5-print-table th { background:#1a5fa8; color:#fff; padding:5px 7px; text-align:left; font-weight:700; border:1px solid #1a5fa8; }
+    body.print-mode #step5-print-table td { padding:4px 7px; border:1px solid #dde1e9; vertical-align:top; line-height:1.5; }
+    body.print-mode #step5-print-table .failure-cell { background:#eaf1fb; font-weight:700; color:#1a5fa8; }
     /* 3단계: 카드 숨기고 표 표시 */
     body.print-mode #fmea-step3-container { display:none !important; }
     body.print-mode #step3-print-table { display:block !important; }
@@ -486,7 +501,7 @@
             <div class="card-desc">심각성(S) × 발생가능성(O) × 발견가능성(D)를 곱하여 RPN을 산정합니다. RPN은 절대적 위험도가 아닌 상대적 우선순위를 나타냅니다.</div>
           </div>
           <!-- 점수 기준표 -->
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:4px;">
+          <div id="step4-score-guide" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:4px;">
             <div style="background:var(--red-light); border-radius:var(--radius-sm); padding:10px 12px; border-left:3px solid var(--red);">
               <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">심각성 (S) — 영향의 심각성</div>
               <div style="font-size:11px;color:var(--gray-700);line-height:1.9;">1~2: 없거나 미미함<br>3~4: 미미함<br>5~6: 중간 영향 / 작은 손상<br>7~8: 주요 손상<br>9~10: 치명적 손상 · 사망</div>
@@ -512,6 +527,8 @@
           </div>
           <div id="rpn-summary-table"></div>
         </div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step4-print-table" style="display:none;"></div>
         <div class="btn-row" style="margin-top:4px;">
           <button class="btn btn-ghost" onclick="goStep(3)">← 이전</button>
           <button class="btn btn-primary" onclick="goStep(5)">다음 단계 →</button>
@@ -539,6 +556,8 @@
           </div>
         </div>
         <div id="fmea-step5-container"></div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step5-print-table" style="display:none;"></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goStep(4)">← 이전</button>
           <button class="btn btn-primary" onclick="goStep(6)">다음 단계 →</button>
@@ -2276,6 +2295,136 @@ function copyToSheet() {
   });
 }
 
+// 5단계 인쇄용 표 생성
+function buildStep5PrintTable() {
+  const wrap = document.getElementById('step5-print-table');
+  if (!wrap) return;
+
+  const items = [...document.querySelectorAll('#fmea-step5-container .ws-section')];
+  if (items.length === 0) { wrap.innerHTML = ''; return; }
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:8%;">하부단계</th>
+      <th style="width:20%;">잠재적 고장유형</th>
+      <th style="width:13%;">Why 1</th>
+      <th style="width:13%;">Why 2</th>
+      <th style="width:13%;">Why 3</th>
+      <th style="width:13%;">Why 4~5</th>
+      <th style="width:20%;">근본원인</th>
+    </tr></thead><tbody>`;
+
+  items.forEach(item => {
+    const subKey  = item.dataset.key || '';
+    const failure = item.dataset.failure || '';
+    const inp = item.querySelectorAll('input[type=text]');
+    const w1   = inp[0]?.value || '';
+    const w2   = inp[1]?.value || '';
+    const w3   = inp[2]?.value || '';
+    const w4   = inp[3]?.value || '';
+    const w5   = inp[4]?.value || '';
+    const root = inp[5]?.value || '';
+    const why45 = [w4, w5].filter(v => v).join(' → ');
+
+    html += `<tr>
+      <td class="failure-cell" style="text-align:center;">${subKey}</td>
+      <td class="failure-cell">${failure}</td>
+      <td>${w1}</td>
+      <td>${w2}</td>
+      <td>${w3}</td>
+      <td>${why45}</td>
+      <td style="font-weight:700;color:#6d28d9;">${root}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// 4단계 인쇄용 표 생성
+function buildStep4PrintTable() {
+  const wrap = document.getElementById('step4-print-table');
+  if (!wrap) return;
+
+  const items = [...document.querySelectorAll('#fmea-step4-container .ws-section')];
+  if (items.length === 0) { wrap.innerHTML = ''; return; }
+
+  // 데이터 수집
+  const rows = items.map(item => {
+    const fkey    = item.dataset.fkey || item.dataset.key;
+    const subKey  = item.dataset.key;
+    const failure = item.dataset.failure || '';
+    const cause   = item.dataset.cause   || '';
+    const effect  = item.dataset.effect  || '';
+    const sliders = item.querySelectorAll('.rpn-slider');
+    const s = parseInt(sliders[0]?.value||5);
+    const o = parseInt(sliders[1]?.value||5);
+    const d = parseInt(sliders[2]?.value||5);
+    const rpn = s * o * d;
+    const sel  = item.dataset.selected === '1';
+    const auto = item.dataset.autoSelected === '1';
+    // 하부단계명
+    const headerSpans = item.querySelectorAll('.ws-header div span');
+    const subName = headerSpans[1]?.textContent || subKey;
+    return { fkey, subKey, subName, failure, cause, effect, s, o, d, rpn, sel, auto };
+  });
+
+  // RPN 순위
+  const sorted = [...rows].sort((a,b) => b.rpn - a.rpn);
+  const rankMap = {};
+  sorted.forEach((r,i) => { rankMap[r.fkey] = i+1; });
+
+  // 하부단계별 그룹핑
+  const subMap = {}, subOrder = [];
+  rows.forEach(r => {
+    if (!subMap[r.subKey]) { subMap[r.subKey] = { subKey:r.subKey, subName:r.subName, failures:[] }; subOrder.push(r.subKey); }
+    subMap[r.subKey].failures.push(r);
+  });
+
+  const rpnColor = v => v>=200?'color:#b03030;font-weight:900':v>=100?'color:#c2410c;font-weight:900':v>=50?'color:#8a5e00;font-weight:700':'';
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:8%;">하부단계</th>
+      <th style="width:18%;">하부단계명</th>
+      <th style="width:22%;">잠재적 고장유형</th>
+      <th style="width:18%;">잠재적 원인</th>
+      <th style="width:7%;text-align:center;">S</th>
+      <th style="width:7%;text-align:center;">O</th>
+      <th style="width:7%;text-align:center;">D</th>
+      <th style="width:7%;text-align:center;">RPN</th>
+      <th style="width:6%;text-align:center;">순위</th>
+      <th style="width:8%;text-align:center;">선정</th>
+    </tr></thead><tbody>`;
+
+  subOrder.forEach(subKey => {
+    const group = subMap[subKey];
+    group.failures.forEach((r, fi) => {
+      const rank = rankMap[r.fkey];
+      const isFirst = fi === 0;
+      const selTag = r.auto ? '✅ S≥8' : r.sel ? '✅ 선정' : '';
+      const rowBg = r.sel ? 'background:#f0f7ff;' : '';
+      html += `<tr style="${rowBg}">`;
+      if (isFirst) {
+        html += `<td rowspan="${group.failures.length}" class="sub-cell" style="text-align:center;">${subKey}</td>
+                 <td rowspan="${group.failures.length}" class="sub-cell">${group.subName}</td>`;
+      }
+      html += `<td>${r.failure}</td>
+               <td style="font-size:8.5pt;">${r.cause}</td>
+               <td style="text-align:center;${r.s>=8?'font-weight:900;color:#b03030;':''}">${r.s}</td>
+               <td style="text-align:center;">${r.o}</td>
+               <td style="text-align:center;">${r.d}</td>
+               <td style="text-align:center;${rpnColor(r.rpn)}">${r.rpn}</td>
+               <td style="text-align:center;font-weight:700;color:${rank<=3?'#b03030':rank<=7?'#c2410c':'#374151'}">${rank}위</td>
+               <td style="text-align:center;font-size:8.5pt;color:${r.sel?'#1a5fa8':'#9ca3af'}">${selTag}</td>`;
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 // 2단계 인쇄용 표 생성
 function buildStep2PrintTable() {
   const wrap = document.getElementById('step2-print-table');
@@ -2381,6 +2530,8 @@ function buildStep3PrintTable() {
 function printReport() {
   buildStep2PrintTable();
   buildStep3PrintTable();
+  buildStep4PrintTable();
+  buildStep5PrintTable();
   document.body.classList.add('print-mode');
   for (let i = 1; i <= 8; i++) {
     const el = document.getElementById('step' + i);
