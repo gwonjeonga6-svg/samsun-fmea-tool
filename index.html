@@ -3,672 +3,2372 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>근본원인분석(RCA) 툴 — KoSQIN</title>
+<title>FMEA 작성 도구 - KoSQIN</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --blue: #185FA5; --blue-dark: #0C447C; --blue-light: #E6F1FB;
-    --green: #0F6E56; --green-light: #E1F5EE;
-    --red: #A32D2D; --red-light: #FCEBEB;
-    --amber-light: #FAEEDA; --amber: #BA7517;
-    --gray: #888780; --gray-light: #F1EFE8;
-    --border: #e0ddd6; --bg: #fafaf8; --card: #ffffff;
-    --text: #1a1a18; --text2: #5f5e5a; --text3: #9a9890;
-    --radius: 10px; --radius-sm: 6px;
+    --blue: #1a5fa8;
+    --blue-dark: #0f4080;
+    --blue-light: #eaf1fb;
+    --blue-mid: #c5d9f4;
+    --green: #0e6b4f;
+    --green-light: #e5f4ee;
+    --red: #b03030;
+    --red-light: #fdf0f0;
+    --amber: #8a5e00;
+    --amber-light: #fdf5e0;
+    --orange: #c2410c;
+    --orange-light: #fff1ea;
+    --purple: #6d28d9;
+    --purple-light: #f3f0ff;
+    --gray-50: #f5f6f8;
+    --gray-100: #eceef2;
+    --gray-200: #dde1e9;
+    --gray-300: #c4cad5;
+    --gray-400: #9199a8;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --sidebar-w: 230px;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', '맑은 고딕', sans-serif; background: var(--gray-50); color: var(--gray-900); font-size: 14px; line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+  .app-shell { display: flex; flex: 1; min-height: 100vh; }
 
-  /* Header */
-  .app-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-  .app-header .logo { display: flex; align-items: center; gap: 10px; }
-  .app-header .logo-badge { background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; }
-  .app-header .logo-title { font-size: 16px; font-weight: 600; color: var(--text); }
-  .app-header .logo-sub { font-size: 12px; color: var(--text2); }
-  .header-actions { display: flex; gap: 8px; }
+  /* Sidebar */
+  .sidebar { width: var(--sidebar-w); background: #0f4080; color: #fff; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; overflow-y: auto; }
+  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo .badge { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: rgba(255,255,255,0.5); text-transform: uppercase; margin-bottom: 4px; }
+  .sidebar-logo .name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .sidebar-steps { padding: 12px 0; flex: 1; }
+  .sidebar-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 18px; cursor: pointer; transition: background 0.15s; position: relative; }
+  .sidebar-step:hover { background: rgba(255,255,255,0.06); }
+  .sidebar-step.active { background: rgba(255,255,255,0.12); }
+  .sidebar-step::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; border-radius: 0 2px 2px 0; }
+  .sidebar-step.active::before { background: #60a5fa; }
+  .sidebar-step.done::before { background: #34d399; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); flex-shrink: 0; margin-top: 1px; }
+  .sidebar-step.active .step-num { border-color: #60a5fa; color: #60a5fa; }
+  .sidebar-step.done .step-num { border-color: #34d399; background: #34d399; color: #fff; }
+  .step-info .step-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); }
+  .sidebar-step.active .step-name { color: rgba(255,255,255,0.95); }
+  .sidebar-step.done .step-name { color: rgba(255,255,255,0.8); }
+  .step-info .step-desc { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+  .sidebar-step.active .step-desc { color: rgba(255,255,255,0.55); }
+  .sidebar-footer { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: rgba(255,255,255,0.3); }
 
-  /* Layout */
-  .app-body { max-width: 820px; margin: 0 auto; padding: 24px 16px 60px; }
+  /* Main */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  .topbar { background: #fff; border-bottom: 1px solid var(--gray-200); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; box-shadow: var(--shadow-sm); flex-wrap: wrap; gap: 8px; }
+  .topbar-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .topbar-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .progress-pill { display: flex; align-items: center; gap: 8px; background: var(--gray-100); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gray-500); }
+  .progress-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+  .page-content { padding: 24px 28px; max-width: 1000px; }
 
-  /* Progress */
-  .progress-wrap { margin-bottom: 28px; }
-  .step-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
-  .step-tab { flex: 1; padding: 10px 6px; text-align: center; font-size: 12px; font-weight: 500; color: var(--text2); background: var(--card); border-right: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
-  .step-tab:last-child { border-right: none; }
-  .step-tab.active { background: var(--blue); color: #fff; }
-  .step-tab.done { background: var(--green-light); color: var(--green); }
-  .step-tab .tab-num { display: block; font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; }
-  .progress-fill { height: 4px; background: var(--blue); border-radius: 2px; transition: width 0.4s ease; }
+  /* Card */
+  .card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+  .card-header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--gray-100); }
+  .card-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 3px; }
+  .card-title { font-size: 17px; font-weight: 700; color: var(--gray-900); }
+  .card-desc { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
 
-  /* Cards */
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
-  .card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .card-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
-
-  /* Forms */
+  /* Fields */
   .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 5px; }
-  .field input[type=text], .field textarea, .field select {
-    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-    font-size: 14px; color: var(--text); background: var(--card); font-family: inherit;
-    transition: border-color 0.15s;
-  }
-  .field input[type=text]:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--blue); }
-  .field textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-
-  /* Radio/Checkbox chips */
-  .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.15s; }
-  .chip input { display: none; }
-  .chip:hover { border-color: var(--blue); color: var(--blue); }
-  .chip.selected { background: var(--blue-light); border-color: var(--blue); color: var(--blue); font-weight: 500; }
-
-  /* Team member rows */
-  .member-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .member-row select { width: 90px; padding: 8px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); background: var(--card); }
-  .member-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); }
-  .member-row .del-btn { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: none; cursor: pointer; color: var(--text3); font-size: 16px; display: flex; align-items: center; justify-content: center; }
-  .member-row .del-btn:hover { background: var(--red-light); color: var(--red); border-color: var(--red); }
-
-  /* CF items */
-  .cf-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; background: var(--bg); }
-  .cf-item input[type=checkbox] { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--blue); }
-  .cf-item input[type=text] { flex: 1; border: none; background: transparent; font-size: 14px; color: var(--text); font-family: inherit; padding: 0; }
-  .cf-item input[type=text]:focus { outline: none; }
-  .cf-item.checked { background: var(--blue-light); border-color: var(--blue); }
-  .cf-badge { font-size: 11px; font-weight: 600; color: var(--blue); background: var(--blue-light); padding: 2px 7px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
-
-  /* Level navigation */
-  .level-nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
-  .level-btn { padding: 5px 11px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 500; color: var(--text2); background: var(--card); cursor: pointer; transition: all 0.15s; }
-  .level-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .level-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .level-btn.done { background: var(--green-light); color: var(--green); border-color: var(--green); }
-
-  /* Analysis box */
-  .analysis-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 12px; }
-  .analysis-q { font-size: 14px; color: var(--text); margin-bottom: 10px; font-weight: 500; }
-  .yn-group { display: flex; gap: 8px; }
-  .yn-btn { padding: 7px 20px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; background: var(--card); color: var(--text2); transition: all 0.15s; font-family: inherit; }
-  .yn-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .yn-btn.yes { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .yn-btn.no-sel { background: var(--red-light); color: var(--red); border-color: var(--red); }
-
-  .alert { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 10px; line-height: 1.5; }
-  .alert-warn { background: var(--amber-light); color: var(--amber); border-left: 3px solid var(--amber); }
-  .alert-ok { background: var(--green-light); color: var(--green); border-left: 3px solid var(--green); }
-  .alert-info { background: var(--blue-light); color: var(--blue); border-left: 3px solid var(--blue); }
-
-  .proxy-list, .root-list { margin-top: 10px; }
-  .check-label { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text); margin-bottom: 7px; cursor: pointer; line-height: 1.4; }
-  .check-label input[type=checkbox] { margin-top: 2px; accent-color: var(--blue); flex-shrink: 0; }
-
-  /* Root summary */
-  .root-tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--blue-light); color: var(--blue); border-radius: 20px; font-size: 13px; font-weight: 500; margin: 3px; }
-  .root-tag .remove { cursor: pointer; color: var(--blue); font-size: 16px; line-height: 1; }
-  .root-tag .remove:hover { color: var(--red); }
-
-  /* Improve plan */
-  .improve-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; position: relative; }
-  .improve-card .root-label { font-size: 12px; font-weight: 600; color: var(--blue); background: var(--blue-light); padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field > label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+  .field > label .opt { font-weight: 400; color: var(--gray-400); font-size: 12px; }
+  input[type=text], input[type=date], textarea, select { width: 100%; padding: 8px 11px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: #fff; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+  input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,95,168,0.1); }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.65; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='%239199a8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; -webkit-appearance: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
 
   /* Buttons */
-  .btn { padding: 9px 20px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s; background: var(--card); color: var(--text); }
-  .btn:hover { background: var(--gray-light); }
-  .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; font-family: inherit; transition: all 0.12s; white-space: nowrap; }
+  .btn-primary { background: var(--blue); color: #fff; }
   .btn-primary:hover { background: var(--blue-dark); }
-  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
-  .btn-success:hover { background: #085041; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .btn-ghost { background: #fff; color: var(--gray-500); border-color: var(--gray-200); }
+  .btn-ghost:hover { background: var(--gray-50); border-color: var(--gray-300); }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 13px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
 
-  /* Print / Summary */
-  .summary-section { margin-bottom: 20px; }
-  .summary-section h3 { font-size: 14px; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; }
-  .summary-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .summary-row:last-child { border-bottom: none; }
-  .summary-row .sl { color: var(--text2); flex-shrink: 0; width: 120px; font-size: 13px; }
-  .summary-row .sv { color: var(--text); flex: 1; }
+  /* Member rows */
+  .member-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .member-row select { flex: 0 0 80px; }
+  .member-row input:nth-child(2) { flex: 2; }
+  .member-row input:nth-child(3) { flex: 1; }
 
+  /* Process step items */
+  .proc-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .proc-num { font-size: 12px; font-weight: 700; color: var(--blue); background: var(--blue-light); border-radius: 4px; padding: 4px 8px; flex-shrink: 0; margin-top: 6px; min-width: 32px; text-align: center; }
+  .proc-right { flex: 1; }
+  .proc-sub-list { margin-top: 6px; }
+  .proc-sub-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .proc-sub-num { font-size: 11px; font-weight: 600; color: var(--gray-400); flex-shrink: 0; min-width: 36px; }
+  .proc-sub-del { background: none; border: none; color: var(--gray-300); font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+  .proc-sub-del:hover { color: var(--red); }
+  .proc-del { background: none; border: none; color: var(--gray-300); font-size: 16px; cursor: pointer; padding: 4px; line-height: 1; flex-shrink: 0; margin-top: 4px; }
+  .proc-del:hover { color: var(--red); }
+
+  /* FMEA worksheet */
+  .ws-section { border: 1.5px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .ws-header { background: var(--blue); color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .ws-header .ws-step { font-size: 11px; font-weight: 700; opacity: 0.8; }
+  .ws-header .ws-name { font-size: 14px; font-weight: 700; flex: 1; }
+  .ws-header .ws-sub { font-size: 12px; opacity: 0.75; }
+  .ws-body { padding: 14px 16px; }
+  .ws-row { display: grid; gap: 10px; margin-bottom: 10px; }
+  .ws-row.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .ws-row.cols2 { grid-template-columns: 1fr 1fr; }
+  .ws-row.cols4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .ws-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-400); display: block; margin-bottom: 4px; }
+  .ws-field input, .ws-field textarea, .ws-field select { font-size: 13px; padding: 7px 9px; }
+  .ws-field textarea { min-height: 60px; }
+
+  /* RPN section */
+  .rpn-box { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px; margin-top: 10px; }
+  .rpn-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-500); margin-bottom: 12px; }
+  .rpn-guide { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .rpn-guide-item { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px; }
+  .rpn-guide-item .rg-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .rpn-guide-item.s .rg-label { color: var(--red); }
+  .rpn-guide-item.o .rg-label { color: var(--amber); }
+  .rpn-guide-item.d .rg-label { color: var(--purple); }
+  .rpn-guide-item .rg-rows { font-size: 11px; color: var(--gray-600); line-height: 1.8; }
+  .rpn-sliders { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+  .rpn-sl label { font-size: 12px; font-weight: 600; color: var(--gray-700); display: block; margin-bottom: 6px; }
+  .rpn-sl .sl-row { display: flex; align-items: center; gap: 10px; }
+  .rpn-sl input[type=range] { flex: 1; accent-color: var(--blue); }
+  .rpn-sl .sl-val { font-size: 20px; font-weight: 800; color: var(--blue); min-width: 24px; text-align: center; }
+  .rpn-result { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: #fff; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); }
+  .rpn-formula { font-size: 13px; color: var(--gray-500); }
+  .rpn-formula span { font-weight: 700; color: var(--gray-900); }
+  .rpn-score-area { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .rpn-lbl { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; }
+  .rpn-val { font-size: 28px; font-weight: 900; }
+  .rpn-val.low { color: var(--green); }
+  .rpn-val.mid { color: var(--amber); }
+  .rpn-val.high { color: var(--orange); }
+  .rpn-val.critical { color: var(--red); }
+  .rpn-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .rpn-badge.low { background: var(--green-light); color: var(--green); }
+  .rpn-badge.mid { background: var(--amber-light); color: var(--amber); }
+  .rpn-badge.high { background: var(--orange-light); color: var(--orange); }
+  .rpn-badge.critical { background: var(--red-light); color: var(--red); }
+
+  /* 5Why */
+  .why-box { background: var(--purple-light); border: 1px solid rgba(109,40,217,0.15); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 10px; }
+  .why-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--purple); letter-spacing: 0.05em; margin-bottom: 10px; }
+  .why-rows { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .why-field label { font-size: 11px; font-weight: 600; color: var(--purple); display: block; margin-bottom: 4px; }
+  .why-field input { font-size: 13px; padding: 6px 8px; border-color: rgba(109,40,217,0.2); }
+  .root-cause-field { margin-top: 8px; }
+  .root-cause-field label { font-size: 12px; font-weight: 700; color: var(--purple); }
+  .root-cause-field input { border-color: var(--purple); background: #fff; }
+
+  /* Paper testing */
+  .paper-box { background: var(--green-light); border: 1px solid rgba(14,107,79,0.2); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 10px; }
+  .paper-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--green); letter-spacing: 0.05em; margin-bottom: 10px; }
+  .paper-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .paper-section label { font-size: 11px; font-weight: 700; color: var(--green); display: block; margin-bottom: 6px; }
+  .paper-sliders { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .paper-sl label { font-size: 11px; font-weight: 600; color: var(--gray-600); display: block; margin-bottom: 4px; }
+  .paper-sl .sl-row { display: flex; align-items: center; gap: 8px; }
+  .paper-sl input[type=range] { flex: 1; accent-color: var(--green); }
+  .paper-sl .sl-val { font-size: 16px; font-weight: 800; color: var(--green); min-width: 20px; text-align: center; }
+  .paper-result { display: flex; align-items: center; gap: 8px; }
+  .paper-rpn-val { font-size: 22px; font-weight: 900; color: var(--green); }
+
+  /* Redesign */
+  .redesign-box { background: var(--blue-light); border: 1px solid var(--blue-mid); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 10px; }
+  .redesign-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--blue); letter-spacing: 0.05em; margin-bottom: 10px; }
+
+  /* Step 4 summary table */
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { background: var(--gray-100); color: var(--gray-600); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--gray-200); }
+  .summary-table td { padding: 9px 10px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: var(--gray-50); }
+
+  /* Step 8 monitoring */
+  .monitor-row { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
+  .monitor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .monitor-task { flex: 1; font-size: 14px; font-weight: 600; color: var(--gray-900); }
+  .month-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .month-item label { font-size: 11px; font-weight: 600; color: var(--gray-500); display: block; margin-bottom: 4px; text-align: center; }
+  .month-item input { font-size: 12px; padding: 5px 6px; text-align: center; }
+
+  .improve-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
   .hidden { display: none !important; }
+  .divider { border: none; border-top: 1px solid var(--gray-100); margin: 14px 0; }
+  .info-box { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; }
+  .info-box.blue { background: var(--blue-light); color: var(--blue); border-left: 3px solid var(--blue); }
+  /* Export buttons */
+  .export-bar { display:flex; gap:10px; margin-bottom:16px; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); }
+  .export-bar .bar-title { font-size:13px; font-weight:600; color:var(--gray-700); align-self:center; margin-right:auto; }
 
-  @media (max-width: 600px) {
-    .grid2, .grid3 { grid-template-columns: 1fr; }
-    .app-body { padding: 16px 10px 60px; }
-  }
+  /* Fishbone diagram */
+  /* Flowchart */
+  .flow-node { display:flex; flex-direction:column; align-items:center; width:100%; }
+  .flow-box-wrap { position:relative; width:90%; max-width:240px; }
+  .flow-oval { background:var(--blue-dark); color:#fff; border-radius:50px; padding:8px 16px; text-align:center; font-size:13px; font-weight:700; width:100%; box-sizing:border-box; }
+  .flow-rect { background:#fff; border:2px solid var(--blue); color:var(--gray-900); border-radius:6px; padding:8px 12px; text-align:center; font-size:13px; width:100%; box-sizing:border-box; }
+  .flow-diamond-wrap { width:100%; display:flex; justify-content:center; margin:6px 0; }
+  .flow-diamond { transform:rotate(45deg); width:76px; height:76px; background:#fff; border:2px solid var(--amber); display:flex; align-items:center; justify-content:center; }
+  .flow-diamond-text { transform:rotate(-45deg); font-size:11px; font-weight:700; color:var(--amber); text-align:center; width:68px; }
+  .flow-arrow { font-size:18px; color:var(--gray-400); line-height:1.2; margin:1px 0; text-align:center; }
+  .flow-del-btn { position:absolute; top:-7px; right:-7px; width:18px; height:18px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px; line-height:18px; text-align:center; display:none; z-index:2; padding:0; }
+  .flow-box-wrap:hover .flow-del-btn { display:block; }
+  .flow-edit { background:transparent; border:none; border-bottom:1px dashed rgba(255,255,255,0.5); color:inherit; font-size:inherit; font-weight:inherit; text-align:center; width:100%; font-family:inherit; outline:none; padding:0; }
+  .flow-rect .flow-edit { border-bottom-color:rgba(26,95,168,0.4); color:var(--gray-900); }
+  .flow-diamond-text .flow-edit { border-bottom-color:rgba(138,94,0,0.4); color:var(--amber); font-size:11px; width:60px; }
+  .flow-compare-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+  .flow-compare-tbl th { background:var(--gray-100); padding:7px 12px; font-weight:700; color:var(--gray-700); border:1px solid var(--gray-200); text-align:left; }
+  .flow-compare-tbl td { padding:7px 12px; border:1px solid var(--gray-200); vertical-align:top; line-height:1.8; }
 
+  .fishbone-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+  .fishbone-wrap h3 { font-size:14px; font-weight:700; color:var(--gray-900); margin-bottom:16px; }
+
+  .save-btns { display:flex; gap:8px; align-items:center; }
+  .save-btns .btn { font-size:12px; padding:5px 10px; }
+  .restore-banner { background:var(--green-light); border:1px solid var(--green); border-radius:var(--radius); padding:10px 16px; margin-bottom:12px; font-size:13px; color:var(--green); font-weight:600; display:flex; align-items:center; gap:10px; }
+
+  /* Print styles */
   @media print {
-    .app-header, .progress-wrap, .btn-row, .btn, .level-nav, .yn-btn { display: none !important; }
-    .card { border: 1px solid #ccc; break-inside: avoid; }
+    .sidebar, .topbar, .btn-row, .export-bar, .save-btns, button,
+    .proc-del, .proc-sub-del, .restore-banner, .progress-pill { display:none !important; }
+    .main { margin-left:0 !important; }
+    .page-content { padding:4px 10px !important; max-width:100% !important; margin-top:0 !important; }
+    .ws-section, .card { break-inside:avoid; box-shadow:none !important; border:1px solid #ccc !important; margin-bottom:8px !important; }
+    body { font-size:11pt; background:#fff; margin:0 !important; }
+    .rpn-box, .why-box, .redesign-box, .paper-box { border:1px solid #ccc; }
+    input[type=text], input[type=date], textarea, select {
+      border:1px solid #ccc !important; background:#fff !important;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .app-shell { display:block !important; }
+    .ws-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    /* 전체 출력 모드 */
+    body.print-mode .hidden { display:block !important; }
+    body.print-mode #step1, body.print-mode #step2, body.print-mode #step3,
+    body.print-mode #step4, body.print-mode #step5, body.print-mode #step6,
+    body.print-mode #step7, body.print-mode #step8 { display:block !important; }
+    body.print-mode .step-divider { display:block !important; border:none; border-top:2px solid #1a5fa8; margin:10px 0 4px; }
+    body.print-mode .step-print-title {
+      display:block !important; font-size:12pt; font-weight:bold;
+      color:#fff; background:#1a5fa8; padding:5px 10px; margin-bottom:8px;
+      break-after:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    /* 4단계: 개별 슬라이더 카드 숨기고 순위표만 출력 */
+    body.print-mode #fmea-step4-container { display:none !important; }
+    body.print-mode #rpn-summary-card { display:block !important; box-shadow:none !important; }
+    body.print-mode #rpn-summary-card button { display:none !important; }
+    /* 7단계: 슬라이더 숨기고 수식+값만 표시 */
+    body.print-mode .rpn-sliders,
+    body.print-mode .paper-sliders { display:none !important; }
+    body.print-mode .rpn-result,
+    body.print-mode .paper-result { border:1px solid #ccc !important; padding:6px 10px !important; border-radius:4px; }
+    body.print-mode .step-print-title + .card,
+    body.print-mode .step-print-title + div { break-before:avoid; }
   }
+  .step-divider, .step-print-title { display:none; }
 </style>
 </head>
 <body>
+<div class="app-shell">
 
-<div class="app-header">
-  <div class="logo">
-    <span class="logo-badge">KoSQIN</span>
-    <div>
-      <div class="logo-title">근본원인분석(RCA)</div>
-      <div class="logo-sub">Root Cause Analysis Toolkit V2.0</div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="badge">KoSQIN</div>
+      <div class="name">고장유형 영향분석<br>(FMEA) 작성 도구</div>
     </div>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-sm" onclick="window.print()">🖨 인쇄</button>
-    <button class="btn btn-sm btn-primary" onclick="resetAll()">새로 작성</button>
-  </div>
-</div>
-
-<div class="app-body">
-
-  <!-- Progress -->
-  <div class="progress-wrap">
-    <div class="step-tabs">
-      <div class="step-tab active" id="tab1" onclick="goStep(1)"><span class="tab-num">1</span>분석 준비</div>
-      <div class="step-tab" id="tab2" onclick="goStep(2)"><span class="tab-num">2</span>사고 분석</div>
-      <div class="step-tab" id="tab3" onclick="goStep(3)"><span class="tab-num">3</span>근본원인 찾기</div>
-      <div class="step-tab" id="tab4" onclick="goStep(4)"><span class="tab-num">4</span>개선활동 계획</div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:25%"></div></div>
-  </div>
-
-  <!-- ===== STEP 1 ===== -->
-  <div id="step1">
-
-    <div class="card">
-      <div class="section-label">환자안전사고 보고서</div>
-      <div class="card-desc">사고 내용을 육하원칙(누가·언제·어디서·무엇을·어떻게·왜)에 따라 작성합니다.</div>
-
-      <div class="grid2">
-        <div class="field"><label>발생일시</label><input type="text" id="acc_date" placeholder="예) 2025-03-15 14:30"></div>
-        <div class="field"><label>보고일시</label><input type="text" id="rep_date" placeholder="예) 2025-03-15 16:00"></div>
+    <nav class="sidebar-steps">
+      <div class="sidebar-step active" id="nav1" onclick="goStep(1)">
+        <div class="step-num" id="sn1">1</div>
+        <div class="step-info"><div class="step-name">고위험 프로세스 선정 · 팀 구성</div><div class="step-desc">주제선정 · 팀장/간사/팀원</div></div>
       </div>
-      <div class="grid2">
-        <div class="field">
-          <label>성별</label>
-          <select id="gender">
-            <option value="">선택</option>
-            <option>남</option><option>여</option>
-          </select>
+      <div class="sidebar-step" id="nav2" onclick="goStep(2)">
+        <div class="step-num" id="sn2">2</div>
+        <div class="step-info"><div class="step-name">프로세스 검토 및 도식화</div><div class="step-desc">단계 · 하부단계 입력</div></div>
+      </div>
+      <div class="sidebar-step" id="nav3" onclick="goStep(3)">
+        <div class="step-num" id="sn3">3</div>
+        <div class="step-info"><div class="step-name">잠재적 고장유형 분석</div><div class="step-desc">고장유형 · 원인 · 영향</div></div>
+      </div>
+      <div class="sidebar-step" id="nav4" onclick="goStep(4)">
+        <div class="step-num" id="sn4">4</div>
+        <div class="step-info"><div class="step-name">우선순위 선정 (RPN)</div><div class="step-desc">S × O × D 계산</div></div>
+      </div>
+      <div class="sidebar-step" id="nav5" onclick="goStep(5)">
+        <div class="step-num" id="sn5">5</div>
+        <div class="step-info"><div class="step-name">근본원인 규명</div><div class="step-desc">5Why 분석</div></div>
+      </div>
+      <div class="sidebar-step" id="nav6" onclick="goStep(6)">
+        <div class="step-num" id="sn6">6</div>
+        <div class="step-info"><div class="step-name">프로세스 재설계</div><div class="step-desc">개선계획 · 담당자 · 지표</div></div>
+      </div>
+      <div class="sidebar-step" id="nav7" onclick="goStep(7)">
+        <div class="step-num" id="sn7">7</div>
+        <div class="step-info"><div class="step-name">새 프로세스 분석·검증</div><div class="step-desc">Paper Testing (개선 후 RPN)</div></div>
+      </div>
+      <div class="sidebar-step" id="nav8" onclick="goStep(8)">
+        <div class="step-num" id="sn8">8</div>
+        <div class="step-info"><div class="step-name">적용 및 모니터링</div><div class="step-desc">세부계획 이행관리</div></div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">대한환자안전질향상간호사회 FMEA Toolkit 기반</div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbarTitle">1단계 — 고위험 프로세스 선정 및 팀 구성</div>
+        <div class="topbar-sub" id="topbarSub">FMEA 주제 선정 · 팀장/간사/팀원 구성</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="save-btns">
+          <button class="btn btn-ghost btn-sm" onclick="saveFMEA()" title="현재 작업 내용을 JSON 파일로 저장">💾 저장</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="저장된 JSON 파일 불러오기">📂 불러오기<input type="file" accept=".json" onchange="loadFMEA(event)" style="display:none;"></label>
         </div>
-        <div class="field"><label>연령</label><input type="text" id="age" placeholder="예) 65세"></div>
+        <div class="progress-pill"><div class="progress-dot"></div><span id="stepBadge">1 / 8단계</span></div>
       </div>
-
-      <div class="field">
-        <label>사고 발생 장소</label>
-        <div class="chip-group" id="place-group">
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="외래">외래</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="병동">병동</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="수술실/회복실">수술실/회복실</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="응급실">응급실</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="중환자실">중환자실</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="검사실">검사실</label>
-          <label class="chip" onclick="selectChip(this,'place')"><input type="radio" name="place" value="기타">기타</label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>사고분류</label>
-        <div class="chip-group">
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="검사">검사</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="낙상">낙상</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="마취/진정">마취/진정</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="수술">수술</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="수혈">수혈</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="투약">투약</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="처치/시술">처치/시술</label>
-          <label class="chip" onclick="selectChip(this,'acctype')"><input type="radio" name="acctype" value="기타">기타</label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>사고 위해정도</label>
-        <div class="chip-group">
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="근접오류">근접오류</label>
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="위해없음">위해없음</label>
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="일시적 손상">일시적 손상</label>
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="장기적 손상">장기적 손상</label>
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="영구적 손상">영구적 손상</label>
-          <label class="chip" onclick="selectChip(this,'severity')"><input type="radio" name="severity" value="사망">사망</label>
-        </div>
-      </div>
-
-      <div class="field"><label>사고내용 (육하원칙)</label><textarea id="acc_content" placeholder="누가, 언제, 어디서, 무엇을, 어떻게, 왜 발생했는지 기술하세요."></textarea></div>
-      <div class="field"><label>사고 후 조치</label><textarea id="acc_action" placeholder="사고 후 취해진 조치 내용을 작성하세요."></textarea></div>
     </div>
 
-    <div class="card">
-      <div class="section-label">문제정의</div>
-      <div class="field"><label>무엇이 일어났는가? (간단 요약)</label><textarea id="prob_def" placeholder="환자안전사고 내용을 간단히 요약하세요."></textarea></div>
-    </div>
+    <div class="page-content">
 
-    <div class="card">
-      <div class="section-label">의무기록 및 근거 검토</div>
-      <div class="field"><label>의무기록 및 근거 조사 결과</label><textarea id="med_record" placeholder="초기평가, 경과기록, 처방, 검사결과 등 관련 의무기록 검토 내용을 작성하세요." style="min-height:90px;"></textarea></div>
-    </div>
-
-    <div class="card">
-      <div class="section-label">관련 부서 면담 및 현장 관찰</div>
-      <div class="field"><label>환자안전사고 관련 영향 요인</label><textarea id="interview1" placeholder="프로세스, 장비, 시설 및 환경 등 영향 요인을 기술하세요."></textarea></div>
-      <div class="field"><label>개선 방향</label><textarea id="interview2" placeholder="프로세스, 장비, 시설 및 환경 등 개선 방향을 기술하세요."></textarea></div>
-    </div>
-
-    <div class="card">
-      <div class="section-label">팀 구성 (10명 이내)</div>
-      <div class="card-desc">팀장(의사결정권자), 간사(환자안전전담자), 팀원(사고 관련 직원) 포함</div>
-      <div id="team-list">
-        <div class="member-row">
-          <select><option>팀장</option><option>간사</option><option>팀원</option></select>
-          <input type="text" placeholder="소속부서/직위" style="flex:1.5;">
-          <input type="text" placeholder="이름">
-          <button class="del-btn" onclick="delMember(this)">×</button>
-        </div>
-        <div class="member-row">
-          <select><option>간사</option><option>팀장</option><option>팀원</option></select>
-          <input type="text" placeholder="소속부서/직위" style="flex:1.5;">
-          <input type="text" placeholder="이름">
-          <button class="del-btn" onclick="delMember(this)">×</button>
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="addMember()" style="margin-top:8px;">+ 팀원 추가</button>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="goStep(2)">2단계 — 사고 분석 →</button>
-    </div>
-  </div>
-
-  <!-- ===== STEP 2 ===== -->
-  <div id="step2" class="hidden">
-    <div class="card">
-      <div class="section-label">2단계 — 환자안전사고 발생 단계 분석</div>
-      <div class="card-title">프로세스 기여요인(CF) 찾기</div>
-      <div class="card-desc">시간 흐름에 따라 사고 발생 단계를 정리합니다. ④ 위험요인 중 사고에 결정적으로 영향을 준 항목에 CF(✓)를 체크하세요.</div>
-
-      <div class="field">
-        <label>발생일시 / 발생장소</label>
-        <div class="grid2">
-          <input type="text" id="s2_datetime" placeholder="예) 2025-03-15 14:30">
-          <input type="text" id="s2_place" placeholder="예) 6병동 302호">
-        </div>
-      </div>
-
-      <div class="field">
-        <label>① 사고 발생 주요 흐름 단계 (→ 순서대로)</label>
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px;" id="flow-steps">
-          <input type="text" placeholder="단계 1" style="padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text); text-align:center;">
-          <input type="text" placeholder="단계 2" style="padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text); text-align:center;">
-          <input type="text" placeholder="단계 3" style="padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text); text-align:center;">
-          <input type="text" placeholder="단계 4" style="padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text); text-align:center;">
-          <input type="text" placeholder="단계 5" style="padding:7px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:inherit; color:var(--text); text-align:center;">
-        </div>
-      </div>
-
-      <div class="field"><label>② 사고 분석을 위한 주요 사항</label><textarea id="s2_main" placeholder="각 단계에서 알아야 할 주요 사항을 기술하세요."></textarea></div>
-      <div class="field"><label>③ 사고발생 흐름 단계에 관련된 직원</label><input type="text" id="s2_staff" placeholder="예) 간호사, 수간호사, 담당 주치의, 간병인, 이송요원"></div>
-
-      <div class="field">
-        <label>④ 위험요인 상세기술 <span style="font-size:12px; color:var(--text3); font-weight:400;">(CF 체크 = 사고에 결정적 영향을 준 요인)</span></label>
-        <div id="cf-list">
-          <div class="cf-item" id="cfi1">
-            <input type="checkbox" onchange="cfToggle(this)">
-            <input type="text" placeholder="위험요인 1 상세 내용">
-            <span class="cf-badge">CF</span>
+      <!-- STEP 1 -->
+      <div id="step1">
+        <div class="step-print-title">1단계 — 고위험 프로세스 선정 · 팀 구성</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">1단계 — FMEA 주제선정</div>
+            <div class="card-title">고위험 프로세스 선정</div>
+            <div class="card-desc">연간 위험관리 활동에서 선정된 우선순위 고위험 프로세스, 신규 도입 업무, 또는 선제적 개선이 필요한 프로세스를 선정합니다.</div>
           </div>
-          <div class="cf-item" id="cfi2">
-            <input type="checkbox" onchange="cfToggle(this)">
-            <input type="text" placeholder="위험요인 2 상세 내용">
-            <span class="cf-badge">CF</span>
+          <div class="field"><label>FMEA 주제 (프로세스명)</label><input type="text" id="proc_name" placeholder="예) 입원환자 낙상예방관리 프로세스, 투약 프로세스, 수혈 프로세스"></div>
+          <div class="grid2 field">
+            <div><label>분석일자</label><input type="date" id="analysis_date"></div>
+            <div><label>부서/부문</label><input type="text" id="department" placeholder="예) 6병동, 수술실, 응급실"></div>
           </div>
-          <div class="cf-item" id="cfi3">
-            <input type="checkbox" onchange="cfToggle(this)">
-            <input type="text" placeholder="위험요인 3 상세 내용">
-            <span class="cf-badge">CF</span>
+          <div class="field"><label>분석 범위 및 목적</label><textarea id="proc_scope" placeholder="예) 입원 환자 낙상 예방을 위해 낙상위험평가 → 예방활동 → 정보공유 → 재평가 전 과정의 잠재적 고장유형을 분석합니다."></textarea></div>
+          <div class="field"><label>선정 근거</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" name="reason" value="위험관리"> 연간 위험관리 우선순위</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" name="reason" value="신규"> 신규 도입 업무</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" name="reason" value="경영진"> 경영진/QPS 지정</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" name="reason" value="시급"> 시급한 선제적 개선</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" name="reason" value="기타" onchange="toggleReasonOther(this)"> 기타</label>
+            </div>
+            <input type="text" id="reason_other" placeholder="기타 선정 근거를 입력하세요" style="display:none;">
           </div>
         </div>
-        <button class="btn btn-sm" onclick="addCF()" style="margin-top:8px;">+ 위험요인 추가</button>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">팀 구성</div>
+            <div class="card-title">FMEA 분석팀</div>
+            <div class="card-desc">10명 이내. 팀장(의사결정권자), 간사(환자안전전담인력), 팀원(해당 프로세스 관련 직원) 포함.</div>
+          </div>
+          <div id="team-list">
+            <div class="member-row">
+              <select><option>팀장</option><option>간사</option><option>팀원</option></select>
+              <input type="text" placeholder="소속부서/직위">
+              <input type="text" placeholder="이름">
+            </div>
+            <div class="member-row">
+              <select><option>간사</option><option>팀장</option><option>팀원</option></select>
+              <input type="text" placeholder="소속부서/직위">
+              <input type="text" placeholder="이름">
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="addMember()" style="margin-top:8px;">+ 팀원 추가</button>
+
+          <hr class="divider">
+          <div class="card-eyebrow" style="margin-bottom:8px;">팀 구성 사전 점검</div>
+          <div style="display:flex; flex-direction:column; gap:6px;" id="checklist">
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 분석 중인 프로세스에 영향을 미치는 주된 분야에 관련된 팀원이 있는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 팀의 개선활동을 수행하는데 필요한 다양한 지식, 의사결정 권한이 있는 리더가 있는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 팀은 개선할 프로세스의 범위와 활동 내용을 확실히 알고 있는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 필요한 자원을 확인하였는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 활동 기간과 시간을 이해하였는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;"> 개선활동 결과의 공유 방법, 대상에 대해 이해하였는가?</label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="goStep(2)">다음 단계 →</button>
+        </div>
       </div>
-    </div>
 
-    <div class="btn-row">
-      <button class="btn" onclick="goStep(1)">← 이전</button>
-      <button class="btn btn-primary" onclick="goStep(3)">3단계 — 근본원인 찾기 →</button>
+      <!-- STEP 2 -->
+      <div id="step2" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">2단계 — 프로세스 검토 및 도식화</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">2단계 — 프로세스 도식화</div>
+            <div class="card-title">프로세스 단계 및 하부단계 입력</div>
+            <div class="card-desc">선정된 고위험 프로세스를 단계와 하부단계로 나눠 기술하세요. 하부단계는 업무 중심으로 상세히 기술하면 고장유형 규명에 효과적입니다.</div>
+          </div>
+          <div id="process-steps-list"></div>
+          <button class="btn btn-ghost btn-sm" onclick="addProcessStep()" style="margin-top:8px;">+ 단계 추가</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(1)">← 이전</button>
+          <button class="btn btn-primary" onclick="initStep3()">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div id="step3" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">3단계 — 잠재적 고장유형 분석</div>
+        <div class="export-bar">
+          <span class="bar-title">📝 3단계 — 고장유형 분석</span>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">3단계 — 브레인스토밍</div>
+            <div class="card-title">잠재적 고장유형 · 원인 · 영향 분석</div>
+            <div class="card-desc">각 하부단계별로 발생 가능한 잠재적 고장유형, 원인, 영향을 기술합니다. 하나의 하부단계에 여러 고장유형이 있을 수 있습니다.</div>
+          </div>
+        </div>
+        <div id="fmea-step3-container"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addStep3Item()" style="margin-bottom:12px;">+ 하부단계 항목 추가</button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(2)">← 이전</button>
+          <button class="btn btn-primary" onclick="goStep(4)">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div id="step4" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">4단계 — 고장유형 우선순위 선정 (RPN)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">4단계 — 우선순위 선정</div>
+            <div class="card-title">RPN (위험우선순위수) 산정</div>
+            <div class="card-desc">심각성(S) × 발생가능성(O) × 발견가능성(D)를 곱하여 RPN을 산정합니다. RPN은 절대적 위험도가 아닌 상대적 우선순위를 나타냅니다.</div>
+          </div>
+          <!-- 점수 기준표 -->
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:4px;">
+            <div style="background:var(--red-light); border-radius:var(--radius-sm); padding:10px 12px; border-left:3px solid var(--red);">
+              <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">심각성 (S) — 영향의 심각성</div>
+              <div style="font-size:11px;color:var(--gray-700);line-height:1.9;">1~2: 없거나 미미함<br>3~4: 미미함<br>5~6: 중간 영향 / 작은 손상<br>7~8: 주요 손상<br>9~10: 치명적 손상 · 사망</div>
+            </div>
+            <div style="background:var(--amber-light); border-radius:var(--radius-sm); padding:10px 12px; border-left:3px solid #d97706;">
+              <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">발생가능성 (O) — 발생 빈도</div>
+              <div style="font-size:11px;color:var(--gray-700);line-height:1.9;">1~2: 거의 없음 (1/1,000)<br>3~4: 낮음 (1/500)<br>5~6: 중간 (1/200)<br>7~8: 높음 (1/100)<br>9~10: 확실히 발생 (1/20)</div>
+            </div>
+            <div style="background:var(--purple-light); border-radius:var(--radius-sm); padding:10px 12px; border-left:3px solid var(--purple);">
+              <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">발견가능성 (D) — 발견 어려움</div>
+              <div style="font-size:11px;color:var(--gray-700);line-height:1.9;">1~2: 항상 발견 (10/10)<br>3~4: 높은 발견가능성 (7/10)<br>5~6: 중간 (5/10)<br>7~8: 낮은 가능성 (2/10)<br>9~10: 대부분 발견 못함</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:8px;">※ 심각성 8점 이상이면 RPN값이 낮아도 개선활동 포함을 검토하세요.</div>
+        </div>
+        <div id="fmea-step4-container"></div>
+
+        <!-- RPN 요약표 -->
+        <div class="card" id="rpn-summary-card" style="margin-top:8px;">
+          <div class="card-header" style="margin-bottom:10px;padding-bottom:8px;">
+            <div class="card-eyebrow">RPN 순위표</div>
+            <div class="card-title" style="font-size:15px;">점수 높은 순 — 우선순위 한눈에 보기</div>
+          </div>
+          <div id="rpn-summary-table"></div>
+        </div>
+        <div class="btn-row" style="margin-top:4px;">
+          <button class="btn btn-ghost" onclick="goStep(3)">← 이전</button>
+          <button class="btn btn-primary" onclick="goStep(5)">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 5 -->
+      <div id="step5" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">5단계 — 고장유형 근본원인 규명</div>
+        <div class="export-bar" style="align-items:center;flex-wrap:wrap;">
+          <span class="bar-title">🐟 원인 시각화</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:var(--gray-700);white-space:nowrap;">분석 문제:</label>
+            <input type="text" id="fishbone-problem" placeholder="예) 낙상 발생, 인계 오류..." style="width:220px;padding:5px 10px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showFishbone()">피시본 다이어그램 보기/숨기기</button>
+        </div>
+        <div id="fishbone-container" class="hidden"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">5단계 — 근본원인 규명</div>
+            <div class="card-title">5Why 분석</div>
+            <div class="card-desc">우선순위 고장유형별로 5Why를 통해 프로세스·시스템에 초점을 둔 근본원인을 도출합니다.</div>
+          </div>
+        </div>
+        <div id="fmea-step5-container"></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(4)">← 이전</button>
+          <button class="btn btn-primary" onclick="goStep(6)">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div id="step6" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">6단계 — 프로세스 재설계</div>
+        <!-- 개선 전/후 비교표 카드 -->
+        <div class="card" id="flowchart-card">
+          <div class="card-header">
+            <div class="card-eyebrow">6단계 — 프로세스 비교</div>
+            <div class="card-title">개선 전 · 후 프로세스 단계 비교</div>
+            <div class="card-desc">개선 전은 2단계 하부단계에서 자동 생성됩니다. 개선 후 내용을 직접 입력하세요.</div>
+          </div>
+          <div id="flow-compare-table"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">6단계 — 프로세스 재설계</div>
+            <div class="card-title">개선계획 수립</div>
+            <div class="card-desc">발생가능성 감소, 발견가능성 향상, 영향의 심각성 감소에 초점을 두고 구체적인 개선계획을 수립합니다. 책임자와 완료일, 평가지표를 명기하세요.</div>
+          </div>
+        </div>
+        <div id="fmea-step6-container"></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(5)">← 이전</button>
+          <button class="btn btn-primary" onclick="goStep(7)">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 7 -->
+      <div id="step7" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">7단계 — 새로운 프로세스 분석·검증 (Paper Testing)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">7단계 — Paper Testing</div>
+            <div class="card-title">새로운 프로세스 분석·검증</div>
+            <div class="card-desc">재설계된 프로세스를 적용했을 때 예상되는 개선 후 RPN을 재산정합니다. RPN이 상승한 항목은 근본원인 또는 개선계획을 재검토하세요.</div>
+          </div>
+          <!-- CI 개선 전/후 비교표 -->
+          <div id="ci-compare-table"></div>
+        </div>
+        <div id="fmea-step7-container"></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(6)">← 이전</button>
+          <button class="btn btn-primary" onclick="initStep8()">다음 단계 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 8 -->
+      <div id="step8" class="hidden">
+        <div class="step-divider"></div>
+        <div class="step-print-title">8단계 — 새로운 프로세스 적용 및 모니터링</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-eyebrow">8단계 — 적용 및 모니터링</div>
+            <div class="card-title">세부 계획 이행관리</div>
+            <div class="card-desc">개선활동이 계획대로 이행되는지 월별로 점검합니다. 개선 종료 후 효과를 평가할 수 있는 지표모니터링을 시행합니다.</div>
+          </div>
+          <!-- 월 설정 -->
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0 4px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--gray-600);">시작 월:</label>
+              <select id="month-start" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
+                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;font-weight:700;color:var(--gray-600);">기간:</label>
+              <select id="month-count" onchange="rebuildMonthGrids()" style="padding:4px 8px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:5px;font-family:inherit;">
+                <option value="3">3개월</option><option value="4">4개월</option><option value="5">5개월</option>
+                <option value="6" selected>6개월</option><option value="7">7개월</option><option value="8">8개월</option>
+                <option value="9">9개월</option><option value="10">10개월</option><option value="11">11개월</option>
+                <option value="12">12개월</option>
+              </select>
+            </div>
+            <span style="font-size:12px;color:var(--gray-400);">※ 변경 시 모든 항목의 월 컬럼이 자동 조정됩니다</span>
+          </div>
+        </div>
+        <div id="fmea-step8-container"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addMonitor()" style="margin-bottom:16px;">+ 이행관리 항목 추가</button>
+        <div class="export-bar" style="margin-top:8px;">
+          <span class="bar-title">📊 완료 — 데이터 내보내기</span>
+          <button class="btn btn-ghost btn-sm" onclick="copyToSheet()">📋 구글 시트에 복사</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadWord()">📄 Word 다운로드</button>
+          <button class="btn btn-ghost btn-sm" onclick="printReport()">🖨 PDF 출력 (전체)</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goStep(7)">← 이전</button>
+        </div>
+      </div>
+
     </div>
   </div>
-
-  <!-- ===== STEP 3 ===== -->
-  <div id="step3" class="hidden">
-    <div class="card">
-      <div class="section-label">3단계 — 근접원인 및 근본원인 찾기</div>
-      <div class="card-title">분석수준별 근본원인 찾기</div>
-      <div class="card-desc">분석수준 1~9를 순서대로 검토하고, 예/아니오를 선택하세요. 근본원인이 도출되면 자동으로 4단계에 반영됩니다.</div>
-      <div class="level-nav" id="levelNav"></div>
-      <div id="levelContent"></div>
-    </div>
-
-    <div class="card" id="rootSummaryCard" style="display:none;">
-      <div class="section-label">도출된 근본원인</div>
-      <div id="rootTagArea"></div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn" onclick="goStep(2)">← 이전</button>
-      <button class="btn btn-primary" onclick="goStep(4)">4단계 — 개선활동 계획 →</button>
-    </div>
-  </div>
-
-  <!-- ===== STEP 4 ===== -->
-  <div id="step4" class="hidden">
-    <div class="card">
-      <div class="section-label">4단계 — 근본원인에 따른 개선활동 계획 수립</div>
-      <div class="card-title">개선활동 계획</div>
-      <div class="card-desc">도출된 근본원인별로 개선전략과 구체적인 개선활동 계획(무엇을, 어떻게, 누가, 언제)을 수립합니다.</div>
-      <div id="improvePlan"></div>
-      <button class="btn btn-sm" onclick="addImprove()" style="margin-top:4px;">+ 개선활동 추가</button>
-    </div>
-
-    <div class="card">
-      <div class="section-label">개선활동 결과 (사후 기록용)</div>
-      <div class="field"><label>개선활동 결과 요약</label><textarea id="improve_result" placeholder="개선활동 완료 후 결과를 기록하세요." style="min-height:80px;"></textarea></div>
-      <div class="field"><label>효과 평가</label><textarea id="improve_eval" placeholder="지표 모니터링 결과 등 효과 평가 내용을 기록하세요."></textarea></div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn" onclick="goStep(3)">← 이전</button>
-      <button class="btn btn-success" onclick="window.print()">🖨 보고서 인쇄 / PDF 저장</button>
-    </div>
-  </div>
-
 </div>
 
 <script>
-const levels = [
-  { id:1, name:'1.업무절차',
-    q1:'환자안전사고와 관련된 규정/지침/절차 등이 있습니까?',
-    q2:'규정/지침/절차에 따라 모두 적용하였습니까?',
-    noRoot:'1.1 규정/지침/절차 부재',
-    roots:['1.2 규정/지침/절차 관리 미흡'],
-    proxies:['규정/지침/절차 제·개정을 공지하지 않음','규정/지침/절차 교육을 받지 못함','규정/지침/절차가 현장 실무와 맞지 않음','규정/지침/절차에 잘못된 업무절차가 있음','수행 주체 및 시기가 명확하지 않음','기타 (직접 입력)'] },
-  { id:2, name:'2.교육/훈련',
-    q1:'환자안전사고와 관련된 교육/훈련 프로그램이 있습니까?',
-    q2:'직원이 교육/훈련을 충분히 받았습니까?',
-    noRoot:'2.1 교육/훈련 체계 부재',
-    roots:['2.2 교육/훈련 계획 운영 미흡'],
-    proxies:['교육/훈련 내용이 적절하지 않음','교육/훈련 방법이 미흡','교육/훈련 시간이 충분하지 않음','교육/훈련 평가를 하지 않음','지속/반복 교육이 없음','기타 (직접 입력)'] },
-  { id:3, name:'3.의사소통',
-    q1:'환자안전사고와 관련하여 필요한 의사소통이 있었습니까?',
-    q2:'의사소통에 문제가 있었습니까?',
-    noRoot:null,
-    roots:['3.1 환자안전을 위한 의사소통 체계 미흡','3.2 안전한 의사소통을 위한 환자안전문화 인식 저하'],
-    proxies:['의사소통 체계가 없음','내용이 다르게 전달됨','표준화되지 않은 약어/용어 사용','인수인계 불명확/누락','안전하지 않은 의사소통 분위기','기타 (직접 입력)'] },
-  { id:4, name:'4.업무수행',
-    q1:'환자안전사고와 관련한 업무수행이 있었습니까?',
-    q2:'업무를 규정에 따라 정확하게 수행하는데 문제가 있었습니까?',
-    noRoot:null,
-    roots:['4.1 규정/지침/절차에 따른 업무 불이행 또는 부적절한 수행','4.2 개인적 요인에 의한 업무 불이행','4.3 부적절한 업무 배분','4.4 불충분한 업무 지원'],
-    proxies:['직원이 업무를 정확히 파악하지 못함','개인 사정으로 업무집중 저하','무리한 근무 스케줄','동료 직원 지원 부족','기타 (직접 입력)'] },
-  { id:5, name:'5.부서관리',
-    q1:'환자안전사고와 관련된 부서관리가 있었습니까?',
-    q2:'부서관리에 문제가 있었습니까?',
-    noRoot:null,
-    roots:['5.1 부적절한 인력관리','5.2 부서장의 규정/지침/절차/매뉴얼 관리 미흡','5.3 부서장의 환자안전사고 관리 미흡','5.4 부서장의 위험관리 미흡'],
-    proxies:['자격을 갖춘 인력이 배치되지 않음','업무 매뉴얼을 관리하지 않음','사고 후 개선활동 유지관리 미흡','위험상황 관리·감독 미흡','기타 (직접 입력)'] },
-  { id:6, name:'6.리더십',
-    q1:'리더십이 환자안전 감소 및 예방을 최우선 순위에 두고 있습니까?',
-    q2:'리더십이 환자안전을 위해 지원과 참여를 하였습니까?',
-    noRoot:'6.1 리더십의 환자안전문화 인식 부족',
-    roots:['6.2 리더십과 직원 간 소통 부재','6.3 리더십의 자원 지원 미흡','6.4 인지된 환자안전 이슈에 대한 지원 미흡','6.5 환자안전 및 의료 질 관리·감독 부재'],
-    proxies:['직원 경고를 지지하지 않음','직원 제안을 받아들이지 않음','필요한 예산·인력 지원 없음','환자안전 이슈에 적시 지원 없음','기타 (직접 입력)'] },
-  { id:7, name:'7.인간공학',
-    q1:'환자안전사고와 관련된 인간공학 요인이 있었습니까?',
-    q2:'인간공학 요인에 문제가 있었습니까?',
-    noRoot:null,
-    roots:['7.1 환자안전 시스템 관리 부재','7.2 물리적 작업요인 관리 부재'],
-    proxies:['복잡한 시스템으로 오류 발견 어려움','느슨한 시스템으로 오류 미보고','반복 동작/불편한 자세 등 물리적 요인','기타 (직접 입력)'] },
-  { id:8, name:'8.의료기기',
-    q1:'환자안전사고와 관련하여 의료기기 요인이 있었습니까?',
-    q2:'의료기기 문제가 있었습니까?',
-    noRoot:null,
-    roots:['8.1 의료기기 안전 설계 미흡','8.2 의료기기 운영관리 미흡'],
-    proxies:['안전 설계를 고려하지 않은 의료기기','노후 의료기기 고장 예방 조치 미흡','예방/유지보수 미이행','직원의 부주의한 의료기기 사용','기타 (직접 입력)'] },
-  { id:9, name:'9.시설/환경',
-    q1:'관련법을 준수하여 시설/환경 관리를 하였습니까?',
-    q2:'시설 및 환경요인에 문제가 있었습니까?',
-    noRoot:'9.1 시설 및 환경 관련 법 미준수',
-    roots:['9.2 업무환경 안전관리 미흡','9.3 시설 및 환경 위험관리 미흡','9.4 재난관리시스템 미흡','9.5 환자 및 환자 보호자의 환자안전활동 참여 미흡'],
-    proxies:['소음, 조도, 공간/시설 문제','위험관리 미수행','재난 대응 체계 없음','환자/보호자 참여 미흡','기타 (직접 입력)'] }
-];
+const topTitles = ['1단계 — 고위험 프로세스 선정 및 팀 구성','2단계 — 프로세스 검토 및 도식화','3단계 — 잠재적 고장유형 브레인스토밍','4단계 — 고장유형 우선순위 선정 (RPN)','5단계 — 고장유형 근본원인 규명','6단계 — 프로세스 재설계','7단계 — 새로운 프로세스 분석·검증 (Paper Testing)','8단계 — 새로운 프로세스 적용 및 모니터링'];
+const topSubs = ['FMEA 주제 선정 · 팀장/간사/팀원 구성','단계 · 하부단계 입력 및 도식화','고장유형 · 원인 · 영향 기술','S × O × D = RPN 산정 및 개선활동 범위 결정','5Why를 통한 시스템적 근본원인 도출','개선계획 · 책임자 · 완료일 · 평가지표 수립','재설계 후 예상 RPN 재산정으로 효과 검증','월별 이행관리 계획 수립 및 지표 모니터링'];
 
-let curLevel = 1;
-const levelState = {};
-let selectedRoots = [];
-let cfCount = 3;
-
-function selectChip(el, name) {
-  document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.closest('.chip').classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-function goStep(n) {
-  [1,2,3,4].forEach(i => {
+function _goStepBase(n) {
+  [1,2,3,4,5,6,7,8].forEach(i => {
     document.getElementById('step'+i).classList.add('hidden');
-    const t = document.getElementById('tab'+i);
-    t.className = 'step-tab' + (i < n ? ' done' : i === n ? ' active' : '');
+    const nav = document.getElementById('nav'+i);
+    const sn = document.getElementById('sn'+i);
+    nav.className = 'sidebar-step';
+    if (i < n) { nav.classList.add('done'); sn.textContent = '✓'; }
+    else if (i === n) { nav.classList.add('active'); sn.textContent = i; }
+    else { sn.textContent = i; }
   });
   document.getElementById('step'+n).classList.remove('hidden');
-  document.getElementById('progressFill').style.width = (n*25)+'%';
-  if (n===3) { buildLevelNav(); renderLevel(); }
-  if (n===4) { buildImprovePlan(); }
-  window.scrollTo(0,0);
+  document.getElementById('stepBadge').textContent = n + ' / 8단계';
+  document.getElementById('topbarTitle').textContent = topTitles[n-1];
+  document.getElementById('topbarSub').textContent = topSubs[n-1];
+  if (n === 4) buildStep4();
+  if (n === 5) buildStep5();
+  if (n === 6) buildStep6();
+  if (n === 7) buildStep7();
+  window.scrollTo(0, 0);
 }
 
+// Step 1
 function addMember() {
   const list = document.getElementById('team-list');
   const row = document.createElement('div');
   row.className = 'member-row';
-  row.innerHTML = `<select><option>팀원</option><option>팀장</option><option>간사</option></select><input type="text" placeholder="소속부서/직위" style="flex:1.5;"><input type="text" placeholder="이름"><button class="del-btn" onclick="delMember(this)">×</button>`;
+  row.innerHTML = `<select><option>팀원</option><option>팀장</option><option>간사</option></select><input type="text" placeholder="소속부서/직위"><input type="text" placeholder="이름">`;
   list.appendChild(row);
 }
 
-function delMember(btn) { btn.closest('.member-row').remove(); }
-
-function cfToggle(cb) {
-  cb.closest('.cf-item').classList.toggle('checked', cb.checked);
-}
-
-function addCF() {
-  cfCount++;
-  const list = document.getElementById('cf-list');
-  const item = document.createElement('div');
-  item.className = 'cf-item';
-  item.innerHTML = `<input type="checkbox" onchange="cfToggle(this)"><input type="text" placeholder="위험요인 ${cfCount} 상세 내용"><span class="cf-badge">CF</span>`;
-  list.appendChild(item);
-}
-
-// 2단계 CF 체크된 항목 가져오기
-function getCFItems() {
-  const items = [];
-  document.querySelectorAll('#cf-list .cf-item').forEach(item => {
-    const cb = item.querySelector('input[type=checkbox]');
-    const txt = item.querySelector('input[type=text]');
-    if (cb && cb.checked && txt && txt.value.trim()) {
-      items.push(txt.value.trim());
-    }
-  });
-  return items;
-}
-
-function buildLevelNav() {
-  const nav = document.getElementById('levelNav');
-  nav.innerHTML = '';
-  levels.forEach(l => {
-    const btn = document.createElement('button');
-    const st = levelState[l.id];
-    const isDone = st && (st.q1 !== undefined);
-    btn.className = 'level-btn' + (l.id===curLevel?' active':'') + (isDone&&l.id!==curLevel?' done':'');
-    btn.textContent = l.name;
-    btn.onclick = () => { curLevel = l.id; buildLevelNav(); renderLevel(); };
-    nav.appendChild(btn);
-  });
-}
-
-function renderLevel() {
-  const l = levels[curLevel-1];
-  const st = levelState[curLevel] || {};
-  const c = document.getElementById('levelContent');
-
-  let html = `<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px;">${l.name.replace(/^\d+\./,'분석수준 '+ curLevel + '. ')}</div>`;
-
-  // 2단계 CF 항목 표시
-  const cfItems = getCFItems();
-  if (cfItems.length > 0) {
-    html += `<div style="background:var(--blue-light);border:1px solid #b8d4ef;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px;">📋 2단계에서 선택한 기여요인(CF) — 참고하며 분석하세요</div>
-      ${cfItems.map(cf=>`<div style="font-size:13px;color:var(--text);padding:3px 0;border-bottom:1px solid #d0e6f7;">· ${cf}</div>`).join('')}
-    </div>`;
+// Step 2 — process steps with sub-steps
+function initStep2() {
+  if (document.getElementById('process-steps-list').children.length === 0) {
+    addProcessStep();
+    addProcessStep();
   }
-
-  html += `<div class="analysis-box">
-    <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">질문 1</div>
-    <div class="analysis-q">${l.q1}</div>
-    <div class="yn-group">
-      <button class="yn-btn${st.q1==='yes'?' yes':''}" onclick="setQ(${l.id},1,'yes')">예</button>
-      <button class="yn-btn${st.q1==='no'?' no-sel':''}" onclick="setQ(${l.id},1,'no')">아니오</button>
-    </div>`;
-
-  if (st.q1==='no' && l.noRoot) {
-    html += `<div class="alert alert-warn" style="margin-top:10px;">→ 근본원인: <strong>${l.noRoot}</strong><br><span style="font-size:12px;">다음 분석수준으로 이동하세요.</span></div>`;
-  }
-  if (st.q1==='no' && !l.noRoot) {
-    html += `<div class="alert alert-ok" style="margin-top:10px;">→ 이 분석수준은 해당 없음. 다음으로 이동하세요.</div>`;
-  }
-  html += `</div>`;
-
-  if (st.q1==='yes') {
-    html += `<div class="analysis-box">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">질문 2</div>
-      <div class="analysis-q">${l.q2}</div>
-      <div class="yn-group">
-        <button class="yn-btn${st.q2==='yes'?' yes':''}" onclick="setQ(${l.id},2,'yes')">예 — 문제 있음</button>
-        <button class="yn-btn${st.q2==='no'?' no-sel':''}" onclick="setQ(${l.id},2,'no')">아니오 — 문제 없음</button>
-      </div>`;
-
-    if (st.q2==='no') html += `<div class="alert alert-ok" style="margin-top:10px;">→ 이 분석수준에서 근본원인 없음. 다음으로 이동하세요.</div>`;
-
-    if (st.q2==='yes') {
-      html += `<div class="proxy-list" style="margin-top:12px;"><div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;">근접원인 선택 (해당 항목 모두 체크)</div>`;
-      l.proxies.forEach(p => {
-        const checked = st.proxies && st.proxies.includes(p);
-        html += `<label class="check-label"><input type="checkbox" ${checked?'checked':''} onchange="setProxy(${l.id},'${p.replace(/'/g,"\\'")}',this.checked)"> ${p}</label>`;
-      });
-      html += `</div>`;
-
-      html += `<div class="root-list" style="margin-top:12px;"><div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;">근본원인 선택</div>`;
-      l.roots.forEach(r => {
-        const checked = selectedRoots.includes(r);
-        html += `<label class="check-label"><input type="checkbox" ${checked?'checked':''} onchange="toggleRoot('${r.replace(/'/g,"\\'")}',this.checked)"> ${r}</label>`;
-      });
-      html += `</div>`;
-    }
-    html += `</div>`;
-  }
-
-  html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">`;
-  if (curLevel < 9) html += `<button class="btn btn-primary" onclick="nextLevel()">다음 분석수준 →</button>`;
-  if (curLevel > 1) html += `<button class="btn" onclick="prevLevel()">← 이전</button>`;
-  html += `</div>`;
-
-  c.innerHTML = html;
-  updateRootSummary();
 }
 
-function setQ(id, qnum, val) {
-  if (!levelState[id]) levelState[id] = {};
-  if (qnum===1) { levelState[id].q1=val; delete levelState[id].q2; }
-  else levelState[id].q2 = val;
-
-  if (qnum===1 && val==='no' && levels[id-1].noRoot) {
-    const r = levels[id-1].noRoot;
-    if (!selectedRoots.includes(r)) selectedRoots.push(r);
-  }
-  if (qnum===1 && val==='yes' && levels[id-1].noRoot) {
-    selectedRoots = selectedRoots.filter(r => r !== levels[id-1].noRoot);
-  }
-  buildLevelNav(); renderLevel();
-}
-
-function setProxy(id, proxy, checked) {
-  if (!levelState[id]) levelState[id]={};
-  if (!levelState[id].proxies) levelState[id].proxies=[];
-  if (checked) { if (!levelState[id].proxies.includes(proxy)) levelState[id].proxies.push(proxy); }
-  else levelState[id].proxies = levelState[id].proxies.filter(p=>p!==proxy);
-}
-
-function toggleRoot(root, checked) {
-  if (checked) { if (!selectedRoots.includes(root)) selectedRoots.push(root); }
-  else selectedRoots = selectedRoots.filter(r=>r!==root);
-  updateRootSummary();
-}
-
-function updateRootSummary() {
-  const card = document.getElementById('rootSummaryCard');
-  const area = document.getElementById('rootTagArea');
-  if (selectedRoots.length===0) { card.style.display='none'; return; }
-  card.style.display='block';
-  area.innerHTML = selectedRoots.map(r=>`<span class="root-tag">${r} <span class="remove" onclick="removeRoot('${r.replace(/'/g,"\\'")}')">×</span></span>`).join('');
-}
-
-function removeRoot(r) {
-  selectedRoots = selectedRoots.filter(x=>x!==r);
-  updateRootSummary(); renderLevel();
-}
-
-function nextLevel() { if (curLevel<9) { curLevel++; buildLevelNav(); renderLevel(); } }
-function prevLevel() { if (curLevel>1) { curLevel--; buildLevelNav(); renderLevel(); } }
-
-function buildImprovePlan() {
-  const plan = document.getElementById('improvePlan');
-  if (plan.innerHTML !== '') return;
-  const roots = selectedRoots.length > 0 ? selectedRoots : ['근본원인을 직접 입력하세요'];
-  roots.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'improve-card';
-    div.innerHTML = `
-      <span class="root-label">${r}</span>
-      <div class="field"><label>개선전략</label><textarea placeholder="이 근본원인에 대한 개선전략을 기술하세요." style="min-height:70px;"></textarea></div>
-      <div class="field"><label>개선활동 계획 (무엇을, 어떻게)</label><textarea placeholder="구체적인 개선활동 내용을 기술하세요."></textarea></div>
-      <div class="grid3">
-        <div class="field"><label>담당자</label><input type="text" placeholder="담당자/책임자"></div>
-        <div class="field"><label>완료예정일</label><input type="text" placeholder="예) 3개월 이내"></div>
-        <div class="field"><label>효과측정지표</label><input type="text" placeholder="예) 교육이수율 100%"></div>
-      </div>`;
-    plan.appendChild(div);
-  });
-}
-
-function addImprove() {
-  const plan = document.getElementById('improvePlan');
+function addProcessStep() {
+  const list = document.getElementById('process-steps-list');
+  const n = list.children.length + 1;
   const div = document.createElement('div');
-  div.className = 'improve-card';
+  div.className = 'proc-item';
+  div.dataset.step = n;
   div.innerHTML = `
-    <div class="field"><label>분석수준 / 근본원인</label><input type="text" placeholder="예) 2.교육/훈련 / 2.2 교육/훈련 계획 운영 미흡"></div>
-    <div class="field"><label>개선전략</label><textarea placeholder="이 근본원인에 대한 개선전략을 기술하세요." style="min-height:70px;"></textarea></div>
-    <div class="field"><label>개선활동 계획 (무엇을, 어떻게)</label><textarea placeholder="구체적인 개선활동 내용을 기술하세요."></textarea></div>
-    <div class="grid3">
-      <div class="field"><label>담당자</label><input type="text" placeholder="담당자/책임자"></div>
-      <div class="field"><label>완료예정일</label><input type="text" placeholder="예) 3개월 이내"></div>
-      <div class="field"><label>효과측정지표</label><input type="text" placeholder="예) 교육이수율 100%"></div>
-    </div>`;
-  plan.appendChild(div);
+    <div class="proc-num">${n}단계</div>
+    <div class="proc-right">
+      <input type="text" placeholder="단계 ${n} 명칭 (예: 낙상위험평가)" style="margin-bottom:8px;">
+      <div class="proc-sub-list" id="sublist-${n}">
+        <div class="proc-sub-item">
+          <span class="proc-sub-num">${n}-1</span>
+          <input type="text" placeholder="하부단계 내용 (예: 환자와 보호자 면담 후 morse fall scale 평가)" style="flex:1;">
+          <button class="proc-sub-del" onclick="delSub(this)">×</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addSubStep(${n})" style="margin-top:4px; font-size:12px;">+ 하부단계 추가</button>
+    </div>
+    <button class="proc-del" onclick="delProcessStep(this)">×</button>`;
+  list.appendChild(div);
 }
 
-function resetAll() {
-  if (!confirm('새로 작성하면 현재 내용이 모두 삭제됩니다. 계속하시겠습니까?')) return;
-  location.reload();
+function addSubStep(stepN) {
+  const subList = document.getElementById('sublist-' + stepN);
+  const n = subList.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'proc-sub-item';
+  div.innerHTML = `<span class="proc-sub-num">${stepN}-${n}</span><input type="text" placeholder="하부단계 내용" style="flex:1;"><button class="proc-sub-del" onclick="delSub(this)">×</button>`;
+  subList.appendChild(div);
 }
+
+function delSub(btn) {
+  const subList = btn.closest('.proc-sub-list');
+  if (subList.children.length <= 1) return;
+  btn.closest('.proc-sub-item').remove();
+  renumberSubs(subList);
+}
+
+function renumberSubs(subList) {
+  const stepN = subList.id.replace('sublist-', '');
+  [...subList.children].forEach((el, i) => { el.querySelector('.proc-sub-num').textContent = stepN + '-' + (i+1); });
+}
+
+function delProcessStep(btn) {
+  const list = document.getElementById('process-steps-list');
+  if (list.children.length <= 1) return;
+  btn.closest('.proc-item').remove();
+  [...list.children].forEach((el, i) => {
+    el.dataset.step = i+1;
+    el.querySelector('.proc-num').textContent = (i+1) + '단계';
+    const inp = el.querySelector('input');
+    if (!inp.value) inp.placeholder = '단계 ' + (i+1) + ' 명칭';
+  });
+}
+
+// Collect all sub-steps
+function getSubSteps() {
+  const result = [];
+  const steps = document.querySelectorAll('#process-steps-list .proc-item');
+  steps.forEach(s => {
+    const stepN = s.dataset.step;
+    const stepName = s.querySelector('input').value || '단계 ' + stepN;
+    const subs = s.querySelectorAll('.proc-sub-item');
+    subs.forEach((sub, si) => {
+      const subName = sub.querySelector('input').value || '';
+      result.push({ stepN, stepName, subN: si+1, subName, key: `${stepN}-${si+1}` });
+    });
+  });
+  return result;
+}
+
+function initStep3() {
+  const container = document.getElementById('fmea-step3-container');
+  const subs = getSubSteps();
+
+  if (subs.length > 0) {
+    const existing = container.querySelectorAll('.ws-section');
+    if (existing.length === 0) {
+      subs.forEach(sub => { container.appendChild(buildStep3Item(sub)); });
+    } else {
+      subs.forEach((sub, i) => {
+        const sec = existing[i];
+        if (!sec) { container.appendChild(buildStep3Item(sub)); return; }
+        // key 업데이트
+        sec.dataset.key = sub.key;
+        const stepSpan = sec.querySelector('.ws-step');
+        if (stepSpan) stepSpan.textContent = sub.key;
+        // 단계명 span 업데이트
+        const stepNameSpan = sec.querySelector('.ws-header > div > span:first-child');
+        if (stepNameSpan) stepNameSpan.textContent = sub.stepName;
+        // 하부단계명 input 업데이트 (기본값이면 교체)
+        const subInput = sec.querySelector('.sub-name-input');
+        if (subInput && (!subInput.value || subInput.value.startsWith('하부단계'))) {
+          subInput.value = sub.subName;
+        }
+      });
+    }
+  }
+
+  if (container.children.length === 0) {
+    container.appendChild(buildStep3Item({ key: '1-1', stepName: '단계 1', subName: '하부단계 1-1' }));
+  }
+  goStep(3);
+}
+
+function addStep3Item() {
+  const container = document.getElementById('fmea-step3-container');
+  const n = container.children.length + 1;
+  const stepN = Math.ceil(n / 3);
+  const subN = ((n - 1) % 3) + 1;
+  container.appendChild(buildStep3Item({
+    key: `${stepN}-${subN}`,
+    stepName: `단계 ${stepN}`,
+    subName: `하부단계 ${stepN}-${subN}`
+  }));
+}
+
+function buildStep3Item(sub) {
+  const div = document.createElement('div');
+  div.className = 'ws-section';
+  div.dataset.key = sub.key;
+  div.innerHTML = `
+    <div class="ws-header" style="position:relative;gap:8px;">
+      <span class="ws-step">${sub.key}</span>
+      <div style="display:flex;flex-direction:column;flex:1;gap:3px;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${sub.stepName}</span>
+        <input class="sub-name-input" style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.4);color:#fff;font-size:14px;font-weight:700;font-family:inherit;padding:2px 4px;width:100%;" placeholder="하부단계 내용" value="${sub.subName}">
+      </div>
+      <button onclick="this.closest('.ws-section').remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">✕ 삭제</button>
+    </div>
+    <div class="ws-body">
+      <div class="ws-row cols3 failure-row-base">
+        <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="이 단계에서 발생할 수 있는 오류나 실패&#10;예) 낙상 평가 누락"></textarea></div>
+        <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="고장이 발생하는 가능한 원인&#10;예) 업무과중, 지식 부족"></textarea></div>
+        <div class="ws-field"><label>잠재적 영향</label><textarea placeholder="고장 발생 시 환자/시스템에 미치는 영향&#10;예) 고위험군 낙상예방활동 못함"></textarea></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addFailureMode(this)" style="font-size:12px;margin-top:8px;">+ 고장유형 추가</button>
+    </div>`;
+  return div;
+}
+
+function addFailureMode(btn) {
+  const body = btn.closest('.ws-body');
+  const wrap = document.createElement('div');
+  wrap.className = 'extra-failure-row';
+  wrap.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);';
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <button class="btn btn-sm" onclick="this.closest('.extra-failure-row').remove()"
+        style="background:var(--red-light);color:var(--red);border:1px solid var(--red);font-size:11px;padding:2px 10px;border-radius:4px;cursor:pointer;">
+        ✕ 이 행 삭제
+      </button>
+    </div>
+    <div class="ws-row cols3">
+      <div class="ws-field"><label>잠재적 고장유형</label><textarea placeholder="추가 고장유형"></textarea></div>
+      <div class="ws-field"><label>잠재적 원인</label><textarea placeholder="추가 원인"></textarea></div>
+      <div class="ws-field"><label>잠재적 영향</label><textarea placeholder="추가 영향"></textarea></div>
+    </div>`;
+  body.insertBefore(wrap, btn);
+}
+
+// ── 공통 헬퍼: ws-section에서 단계명/하부단계명 읽기 ──
+function getStepHeader(item) {
+  const key = item.dataset.key || '';
+  const stepLabel = item.querySelector('.ws-step')?.textContent || key;
+  const headerDiv = item.querySelector('.ws-header > div');
+
+  let stepName = '';
+  let subName  = '';
+
+  if (headerDiv) {
+    // 3단계: div > span(단계명) + input.sub-name-input
+    // 4·5·7단계: div > span[0](단계명) + span[1](하부단계명)
+    const subInput = item.querySelector('.sub-name-input');
+    const spans = [...headerDiv.querySelectorAll('span')];
+    if (subInput !== null) {
+      stepName = spans[0]?.textContent || '';
+      subName  = subInput.value || '';
+    } else {
+      stepName = spans[0]?.textContent || '';
+      subName  = spans[1]?.textContent || '';
+    }
+  } else {
+    // 6단계: ws-header > span(ws-step) + span(stepName) + span(subName) 평면 구조
+    const allSpans = [...item.querySelectorAll('.ws-header > span')];
+    // allSpans[0] = ws-step (key), [1] = stepName, [2] = subName
+    stepName = allSpans[1]?.textContent || '';
+    subName  = allSpans[2]?.textContent || '';
+  }
+
+  stepName = stepName.replace(/^단계\s*\d+\s*/,'').trim() || stepName;
+  subName  = subName.replace(/^하부단계\s*[\d-]+\s*/,'').trim() || subName || key;
+
+  return { key, stepLabel, stepName, subName };
+}
+
+// Step 4 — RPN
+function buildStep4() {
+  const container = document.getElementById('fmea-step4-container');
+  const items = document.querySelectorAll('#fmea-step3-container .ws-section');
+
+  // 이미 같은 수면 재빌드 안 하되, 이벤트 리스너는 항상 재연결
+  if (container.children.length === items.length && container.children.length > 0) {
+    container.querySelectorAll('.ws-section').forEach(div => {
+      div.querySelectorAll('.rpn-slider').forEach(sl => {
+        // oninput 속성 방식으로 재설정 (가장 확실)
+        sl.oninput = function() { updateRPN4(this); };
+      });
+      // 현재 값으로 즉시 렌더링
+      const firstSl = div.querySelector('.rpn-slider');
+      if (firstSl) updateRPN4(firstSl);
+    });
+    setTimeout(updateRPNSummary, 100);
+    return;
+  }
+  // 기존 값 백업
+  const saved = {};
+  container.querySelectorAll('.ws-section').forEach(sec => {
+    const sl = sec.querySelectorAll('input[type=range]');
+    saved[sec.dataset.key] = {
+      s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
+      scope: sec.querySelector('select')?.value||'',
+      priority: sec.querySelector('input[type=text]')?.value||''
+    };
+  });
+  container.innerHTML = '';
+  items.forEach(item => {
+    const { key, stepLabel, stepName, subName } = getStepHeader(item);
+    const div = document.createElement('div');
+    div.className = 'ws-section';
+    div.dataset.key = key;
+    div.innerHTML = `
+      <div class="ws-header">
+        <span class="ws-step">${stepLabel}</span>
+        <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${subName}</span>
+        </div>
+      </div>
+      <div class="ws-body">
+        <div class="rpn-box">
+          <div class="rpn-title">RPN 점수 산정</div>
+          <div class="rpn-sliders">
+            <div class="rpn-sl">
+              <label>심각성 (S)</label>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
+            </div>
+            <div class="rpn-sl">
+              <label>발생가능성 (O)</label>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
+            </div>
+            <div class="rpn-sl">
+              <label>발견가능성 (D)</label>
+              <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
+            </div>
+          </div>
+          <div class="rpn-result">
+            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>) &nbsp;<span style="font-size:10px;color:var(--gray-400);">※ 슬라이더 초기값 5×5×5=125</span></div>
+            <div class="rpn-score-area">
+              <span class="rpn-lbl">RPN</span>
+              <span class="rpn-val mid rpn-num">125</span>
+              <span class="rpn-badge mid rpn-badge-el">우선 개선</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    // 슬라이더 oninput 직접 설정
+    div.querySelectorAll('.rpn-slider').forEach(sl => {
+      sl.oninput = function() { updateRPN4(this); };
+    });
+    // 이전 값 복원
+    if (saved[key]) {
+      const sl = div.querySelectorAll('.rpn-slider');
+      if (sl[0]) { sl[0].value = saved[key].s; sl[1].value = saved[key].o; sl[2].value = saved[key].d; }
+      const sel = div.querySelector('select'); if (sel) sel.value = saved[key].scope;
+      const pri = div.querySelector('input[type=text]'); if (pri) pri.value = saved[key].priority;
+    }
+    setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
+  });
+  setTimeout(updateRPNSummary, 100);
+}
+
+function updateRPN4(slider) {
+  const box = slider.closest('.rpn-box');
+  if (!box) return;
+  const sliders = box.querySelectorAll('.rpn-slider');
+  if (sliders.length < 3) return;
+  const s = parseInt(sliders[0].value), o = parseInt(sliders[1].value), d = parseInt(sliders[2].value);
+  const rpn = s * o * d;
+  const vals = box.querySelectorAll('.sl-val');
+  if (vals[0]) vals[0].textContent = s;
+  if (vals[1]) vals[1].textContent = o;
+  if (vals[2]) vals[2].textContent = d;
+  const fs = box.querySelector('.fs'); if (fs) fs.textContent = s;
+  const fo = box.querySelector('.fo'); if (fo) fo.textContent = o;
+  const fd = box.querySelector('.fd'); if (fd) fd.textContent = d;
+  const rpnNum = box.querySelector('.rpn-num'); if (rpnNum) rpnNum.textContent = rpn;
+  let cls, label;
+  if (rpn >= 200) { cls = 'critical'; label = '즉시 개선'; }
+  else if (rpn >= 100) { cls = 'high'; label = '우선 개선'; }
+  else if (rpn >= 50) { cls = 'mid'; label = '모니터링'; }
+  else { cls = 'low'; label = '수용 가능'; }
+  if (rpnNum) rpnNum.className = `rpn-val ${cls}`;
+  const badgeEl = box.querySelector('.rpn-badge-el');
+  if (badgeEl) { badgeEl.className = `rpn-badge ${cls}`; badgeEl.textContent = label; }
+  updateRPNSummary();
+}
+
+function updateRPNSummary() {
+  const table = document.getElementById('rpn-summary-table');
+  if (!table) return;
+  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
+  if (items.length === 0) {
+    table.innerHTML = '<p style="color:var(--gray-400);font-size:13px;">슬라이더를 조작하면 자동으로 업데이트됩니다.</p>';
+    return;
+  }
+
+  // 단계별 그룹핑 (순서 유지)
+  const stepMap = {};
+  const stepOrder = [];
+  items.forEach(item => {
+    const key = item.dataset.key; // e.g. "1-1"
+    const stepKey = key.split('-')[0]; // "1"
+    const { stepName, subName } = getStepHeader(item);
+    const sliders = item.querySelectorAll('.rpn-slider');
+    const s = parseInt(sliders[0]?.value||5);
+    const o = parseInt(sliders[1]?.value||5);
+    const d = parseInt(sliders[2]?.value||5);
+    const rpn = s * o * d;
+    if (!stepMap[stepKey]) {
+      stepMap[stepKey] = { stepKey, stepName, subs:[], ci:0, selected: false };
+      stepOrder.push(stepKey);
+    }
+    stepMap[stepKey].subs.push({ key, subName, s, o, d, rpn });
+    stepMap[stepKey].ci += rpn;
+    if (item.dataset.selected === '1') stepMap[stepKey].selected = true;
+  });
+
+  // CI 순위 계산
+  const ciSorted = [...stepOrder].sort((a,b) => stepMap[b].ci - stepMap[a].ci);
+  const ciRankMap = {};
+  ciSorted.forEach((k, i) => { ciRankMap[k] = i + 1; });
+
+  const colorMap = { critical:'#b03030', high:'#c2410c', mid:'#8a5e00', low:'#0e6b4f' };
+  const bgMap    = { critical:'#fdf0f0', high:'#fff1ea', mid:'#fdf5e0', low:'#e5f4ee' };
+  const rankColors = ['#b03030','#c2410c','#8a5e00','#374151','#374151'];
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="background:var(--gray-100);">
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:90px;">단계</th>
+      <th style="padding:7px 10px;text-align:left;font-weight:700;color:var(--gray-700);">하부단계</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">S</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">O</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:36px;">D</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:70px;">RPN</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:80px;">CI 합계</th>
+      <th style="padding:7px 10px;text-align:center;font-weight:700;color:var(--gray-700);width:90px;">단계 선정</th>
+    </tr></thead><tbody>`;
+
+  stepOrder.forEach(stepKey => {
+    const step = stepMap[stepKey];
+    const rank = ciRankMap[stepKey];
+    const rankBg = rankColors[Math.min(rank-1, rankColors.length-1)];
+    const sel = step.selected;
+
+    step.subs.forEach((sub, si) => {
+      let cls = 'low';
+      if (sub.rpn >= 200) cls = 'critical';
+      else if (sub.rpn >= 100) cls = 'high';
+      else if (sub.rpn >= 50) cls = 'mid';
+      const rowBg = sel ? 'background:#f0f7ff;' : '';
+      const isFirst = si === 0;
+
+      html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}${isFirst ? 'border-top:2px solid '+rankBg+';' : ''}">`;
+
+      // 단계 컬럼 — 첫 행에만 rowspan
+      if (isFirst) {
+        html += `<td rowspan="${step.subs.length}" style="padding:8px 10px;text-align:center;vertical-align:middle;border-right:2px solid ${rankBg};${rowBg}">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-light);padding:2px 6px;border-radius:3px;margin-bottom:4px;">${stepKey}단계</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gray-800);line-height:1.3;">${step.stepName || '단계명'}</div>
+          ${sel ? '<div style="font-size:10px;color:#1a5fa8;margin-top:4px;font-weight:600;">✅ 선정됨</div>' : ''}
+        </td>`;
+      }
+
+      html += `<td style="padding:7px 10px;">
+          <span style="font-size:11px;font-weight:700;color:var(--blue);margin-right:5px;">${sub.key}</span>
+          <span style="color:var(--gray-900);">${sub.subName}</span>
+        </td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.s}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.o}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--gray-700);">${sub.d}</td>
+        <td style="padding:7px 10px;text-align:center;">
+          <span style="font-size:15px;font-weight:900;color:${colorMap[cls]};background:${bgMap[cls]};padding:2px 8px;border-radius:4px;">${sub.rpn}</span>
+        </td>`;
+
+      // CI + 선정 버튼 — 첫 행에만 rowspan
+      if (isFirst) {
+        html += `<td rowspan="${step.subs.length}" style="padding:8px 10px;text-align:center;vertical-align:middle;border-left:2px solid ${rankBg};">
+          <div style="font-size:16px;font-weight:900;color:${rankBg};">${step.ci}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">CI  ${rank}순위</div>
+        </td>
+        <td rowspan="${step.subs.length}" style="padding:8px 10px;text-align:center;vertical-align:middle;">
+          <button onclick="selectStepCI('${stepKey}')" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;width:74px;${sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-500);border:2px solid var(--gray-200);'}">
+            ${sel ? '✅ 선정됨' : '선정하기'}
+          </button>
+        </td>`;
+      }
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 단계 선정 버튼 클릭 시 해당 단계 하부단계 전체가 5단계(근본원인 규명) 대상으로 지정됩니다.</p>';
+  table.innerHTML = html;
+}
+
+function selectStepCI(stepKey) {
+  // 해당 단계 하부단계 전체에 dataset.selected 토글
+  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
+  let anySelected = false;
+  items.forEach(item => {
+    const k = item.dataset.key.split('-')[0];
+    if (k === stepKey && item.dataset.selected === '1') anySelected = true;
+  });
+  items.forEach(item => {
+    const k = item.dataset.key.split('-')[0];
+    if (k === stepKey) {
+      item.dataset.selected = anySelected ? '0' : '1';
+    }
+  });
+  updateRPNSummary();
+}
+
+function buildStep5() {
+  const container = document.getElementById('fmea-step5-container');
+  const allItems = document.querySelectorAll('#fmea-step4-container .ws-section');
+
+  // 4단계에서 선정된 단계(dataset.selected=1)의 하부단계만 필터링
+  const selectedStepKeys = new Set();
+  [...document.querySelectorAll('#fmea-step4-container .ws-section')].forEach(item => {
+    if (item.dataset.selected === '1') {
+      selectedStepKeys.add(item.dataset.key.split('-')[0]);
+    }
+  });
+
+  const selectedItems = selectedStepKeys.size > 0
+    ? [...allItems].filter(item => selectedStepKeys.has(item.dataset.key.split('-')[0]))
+    : [];
+
+  // 선정 항목이 없으면 전체 사용 (선택 안 한 경우 대비)
+  const items = selectedItems.length > 0 ? selectedItems : [...allItems];
+
+  // 현재 표시 중인 key 목록과 비교해서 다르면 재빌드
+  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.key).join(',');
+  const newKeys = items.map(i => i.dataset.key).join(',');
+  if (curKeys === newKeys && container.children.length > 0) return;
+
+  // 기존 값 백업
+  const saved = {};
+  container.querySelectorAll('.ws-section').forEach(sec => {
+    const inp = sec.querySelectorAll('input[type=text]');
+    saved[sec.dataset.key] = { w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
+  });
+  container.innerHTML = '';
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 4단계에서 개선활동 범위를 선정해주세요.</p></div>`;
+    return;
+  }
+
+  // 선정 항목 수 안내 배너
+  if (selectedItems.length > 0) {
+    const banner = document.createElement('div');
+    banner.className = 'info-box blue';
+    banner.style.marginBottom = '12px';
+    banner.innerHTML = `✅ 4단계에서 <strong>${selectedItems.length}개 항목</strong>이 선정되었습니다. 선정된 항목에 대해 5Why 분석을 진행합니다.`;
+    container.appendChild(banner);
+  }
+
+  items.forEach(item => {
+    const { key, stepLabel, stepName, subName } = getStepHeader(item);
+    // RPN 점수도 가져와서 표시
+    const sliders = item.querySelectorAll('input[type=range]');
+    const s = sliders[0]?.value||'-', o = sliders[1]?.value||'-', d = sliders[2]?.value||'-';
+    const rpn = sliders.length >= 3 ? parseInt(s)*parseInt(o)*parseInt(d) : '-';
+    const scope = item.querySelector('select')?.value || '';
+    const div = createWhyItem(key, stepName, subName, stepLabel, rpn, scope);
+    container.appendChild(div);
+    // 이전 값 복원
+    if (saved[key]) {
+      const inp = div.querySelectorAll('input[type=text]');
+      if (inp[0]) inp[0].value = saved[key].w1;
+      if (inp[1]) inp[1].value = saved[key].w2;
+      if (inp[2]) inp[2].value = saved[key].w3;
+      if (inp[3]) inp[3].value = saved[key].w4;
+      if (inp[4]) inp[4].value = saved[key].w5;
+      if (inp[5]) inp[5].value = saved[key].root;
+    }
+  });
+}
+
+function createWhyItem(key, stepName, subName, stepLabel, rpn, scope) {
+  const rpnColor = rpn >= 200 ? '#b03030' : rpn >= 100 ? '#c2410c' : rpn >= 50 ? '#8a5e00' : '#0e6b4f';
+  const rpnBadge = rpn ? `<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;">RPN ${rpn}</span>` : '';
+  const scopeBadge = scope === '고려대상 (심각성 8점 이상)' ? `<span style="font-size:10px;background:rgba(255,200,0,0.3);color:#fff;padding:1px 6px;border-radius:3px;margin-left:4px;">고려대상</span>` : '';
+  const div = document.createElement('div');
+  div.className = 'ws-section';
+  div.dataset.key = key;
+  div.innerHTML = `
+    <div class="ws-header">
+      <span class="ws-step">${stepLabel || key}</span>
+      <span style="font-size:14px;font-weight:700;color:#fff;flex:1;">${stepName}</span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.75);">${subName}</span>
+      ${rpnBadge}${scopeBadge}
+    </div>
+    <div class="ws-body">
+      <div class="why-box">
+        <div class="why-title">5Why 분석 — 근본원인 탐색</div>
+        <div class="why-rows">
+          <div class="why-field"><label>Why 1</label><input type="text" placeholder="왜 발생했는가?"></div>
+          <div class="why-field"><label>Why 2</label><input type="text" placeholder="왜?"></div>
+          <div class="why-field"><label>Why 3</label><input type="text" placeholder="왜?"></div>
+          <div class="why-field"><label>Why 4</label><input type="text" placeholder="왜?"></div>
+          <div class="why-field"><label>Why 5 (선택)</label><input type="text" placeholder="왜?"></div>
+        </div>
+        <div class="root-cause-field" style="margin-top:10px;">
+          <label>근본원인</label>
+          <input type="text" placeholder="5Why를 통해 도출된 시스템적 근본원인을 기술하세요." style="border-color:var(--purple);font-weight:600;">
+        </div>
+      </div>
+    </div>`;
+  return div;
+}
+
+// ── 개선 전/후 비교표 ──
+function buildFlowchart() {
+  buildCompareTable();
+}
+
+function buildCompareTable() {
+  const tbl = document.getElementById('flow-compare-table');
+  if (!tbl) return;
+  if (tbl.dataset.built === '1') return; // 이미 만들어진 경우 유지
+
+  const subs = getSubSteps();
+  const rows = subs.length > 0
+    ? subs.map(s => ({ before: s.subName || s.stepName, after: '' }))
+    : [{ before: '', after: '' }];
+
+  renderCompareTable(rows);
+  tbl.dataset.built = '1';
+}
+
+function renderCompareTable(rows) {
+  const tbl = document.getElementById('flow-compare-table');
+  if (!tbl) return;
+
+  let html = `
+  <table class="flow-compare-tbl" style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr>
+      <th style="width:40px;padding:8px;background:var(--gray-100);border:1px solid var(--gray-200);text-align:center;color:var(--gray-500);">No.</th>
+      <th style="padding:8px 12px;background:#fdf0f0;border:1px solid var(--gray-200);color:var(--red);font-weight:700;">🔴 개선 전</th>
+      <th style="padding:8px 12px;background:#e5f4ee;border:1px solid var(--gray-200);color:var(--green);font-weight:700;">🟢 개선 후</th>
+      <th style="width:40px;padding:8px;background:var(--gray-100);border:1px solid var(--gray-200);"></th>
+    </tr></thead>
+    <tbody id="compare-tbody">`;
+
+  rows.forEach((r, i) => {
+    html += `<tr data-idx="${i}">
+      <td style="padding:6px 8px;border:1px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:12px;">${i+1}</td>
+      <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#fdf8f8;">
+        <input type="text" value="${r.before}" placeholder="개선 전 단계 내용" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+      </td>
+      <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#f0faf4;">
+        <input type="text" value="${r.after}" placeholder="개선 후 단계 내용 입력" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+      </td>
+      <td style="padding:4px;border:1px solid var(--gray-200);text-align:center;">
+        <button onclick="delCompareRow(this)" style="background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:2px 6px;" title="행 삭제">✕</button>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>
+  <div style="margin-top:8px;display:flex;gap:8px;">
+    <button class="btn btn-ghost btn-sm" onclick="addCompareRow()">＋ 행 추가</button>
+  </div>`;
+
+  tbl.innerHTML = html;
+}
+
+function addCompareRow() {
+  const tbody = document.getElementById('compare-tbody');
+  if (!tbody) return;
+  const i = tbody.rows.length;
+  const tr = document.createElement('tr');
+  tr.dataset.idx = i;
+  tr.innerHTML = `
+    <td style="padding:6px 8px;border:1px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:12px;">${i+1}</td>
+    <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#fdf8f8;">
+      <input type="text" placeholder="개선 전 단계 내용" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+    </td>
+    <td style="padding:4px 6px;border:1px solid var(--gray-200);background:#f0faf4;">
+      <input type="text" placeholder="개선 후 단계 내용 입력" style="width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;outline:none;padding:4px;">
+    </td>
+    <td style="padding:4px;border:1px solid var(--gray-200);text-align:center;">
+      <button onclick="delCompareRow(this)" style="background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:2px 6px;" title="행 삭제">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('input').focus();
+}
+
+function delCompareRow(btn) {
+  const row = btn.closest('tr');
+  if (!row) return;
+  const tbody = document.getElementById('compare-tbody');
+  if (tbody.rows.length <= 1) return; // 최소 1행 유지
+  row.remove();
+  // 번호 재정렬
+  [...tbody.rows].forEach((r, i) => {
+    r.cells[0].textContent = i + 1;
+  });
+}
+
+// Step 6 — Redesign
+function buildStep6() {
+  buildFlowchart();
+  const container = document.getElementById('fmea-step6-container');
+  const items = document.querySelectorAll('#fmea-step5-container .ws-section');
+  if (container.children.length === items.length && container.children.length > 0) return;
+  // 기존 값 백업
+  const saved = {};
+  container.querySelectorAll('.ws-section').forEach(sec => {
+    const inp = sec.querySelectorAll('.redesign-box input');
+    saved[sec.dataset.key] = { redesign: sec.querySelector('textarea')?.value||'', responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'' };
+  });
+  container.innerHTML = '';
+  if (items.length === 0) { addRedesignItem(); return; }
+
+  items.forEach(item => {
+    const key = item.dataset.key;
+    const stepLabel = item.querySelector('.ws-step')?.textContent || key;
+    const { stepName, subName } = getStepHeader(item);
+    const rootCause = item.querySelector('.root-cause-field input')?.value || '';
+    const div = document.createElement('div');
+    div.className = 'ws-section';
+    div.dataset.key = key;
+    div.innerHTML = `
+      <div class="ws-header">
+        <span class="ws-step">${stepLabel}</span>
+        <span style="font-size:14px;font-weight:700;color:#fff;flex:1;">${stepName}</span>
+        <span style="font-size:12px;color:rgba(255,255,255,0.75);">${subName}</span>
+      </div>
+      <div class="ws-body">
+        ${rootCause ? `<div style="font-size:12px;color:var(--purple);font-weight:600;margin-bottom:10px;padding:8px 12px;background:var(--purple-light);border-radius:var(--radius-sm);">근본원인: ${rootCause}</div>` : ''}
+        <div class="redesign-box">
+          <div class="redesign-title">프로세스 재설계</div>
+          <div class="ws-field" style="margin-bottom:10px;"><label>재설계 내용 (개선계획)</label><textarea placeholder="발생가능성 감소 / 발견가능성 향상 / 심각성 감소에 초점을 둔 구체적인 개선계획을 기술하세요.&#10;예) 낙상관리 프로그램을 의사 필수교육에 포함 / 주기적인 교육 내용 검토"></textarea></div>
+          <div class="grid3">
+            <div class="ws-field"><label>책임자</label><input type="text" placeholder="예) 간호부서장, 인사부서장"></div>
+            <div class="ws-field"><label>완료예정일</label><input type="date" placeholder="날짜 선택"></div>
+            <div class="ws-field"><label>평가지표</label><input type="text" placeholder="예) 교육이수율, 낙상발생률"></div>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    // 이전 값 복원
+    if (saved[key]) {
+      const ta = div.querySelector('textarea'); if (ta) ta.value = saved[key].redesign;
+      const inp = div.querySelectorAll('.redesign-box input');
+      if (inp[0]) inp[0].value = saved[key].responsible;
+      if (inp[1]) inp[1].value = saved[key].deadline;
+      if (inp[2]) inp[2].value = saved[key].kpi;
+    }
+  });
+}
+
+function addRedesignItem() {
+  const container = document.getElementById('fmea-step6-container');
+  const div = document.createElement('div');
+  div.className = 'ws-section';
+  div.innerHTML = `
+    <div class="ws-header"><span class="ws-step">-</span><span style="font-size:14px;font-weight:700;color:#fff;flex:1;">재설계 항목</span></div>
+    <div class="ws-body">
+      <div class="redesign-box">
+        <div class="redesign-title">프로세스 재설계</div>
+        <div class="ws-field" style="margin-bottom:10px;"><label>재설계 내용 (개선계획)</label><textarea placeholder="개선계획을 기술하세요."></textarea></div>
+        <div class="grid3">
+          <div class="ws-field"><label>책임자</label><input type="text" placeholder="담당자"></div>
+          <div class="ws-field"><label>완료예정일</label><input type="date" placeholder="날짜 선택"></div>
+          <div class="ws-field"><label>평가지표</label><input type="text" placeholder="지표명"></div>
+        </div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+}
+
+// Step 7 — Paper Testing
+function buildStep7() {
+  const container = document.getElementById('fmea-step7-container');
+  const items = document.querySelectorAll('#fmea-step6-container .ws-section');
+  if (container.children.length === items.length && container.children.length > 0) return;
+  container.innerHTML = '';
+  if (items.length === 0) {
+    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">6단계에서 재설계 내용을 먼저 입력해주세요.</p></div>`;
+    return;
+  }
+
+  items.forEach(item => {
+    const key = item.dataset.key || '1-1';
+    const stepLabel = item.querySelector('.ws-step')?.textContent || key;
+    const headerSpans = item.querySelectorAll('.ws-header span');
+    const { stepName, subName } = getStepHeader(item);
+
+    // 4단계 RPN 가져오기
+    const beforeItem = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
+    let beforeS = 5, beforeO = 5, beforeD = 5;
+    if (beforeItem) {
+      const sliders = beforeItem.querySelectorAll('input[type=range]');
+      if (sliders.length >= 3) {
+        beforeS = parseInt(sliders[0].value) || 5;
+        beforeO = parseInt(sliders[1].value) || 5;
+        beforeD = parseInt(sliders[2].value) || 5;
+      }
+    }
+    const beforeRPN = beforeS * beforeO * beforeD;
+    const afterS = Math.max(1, beforeS - 2);
+    const afterO = Math.max(1, beforeO - 2);
+    const afterD = Math.max(1, beforeD - 2);
+
+    const div = document.createElement('div');
+    div.className = 'ws-section';
+    div.dataset.key = key;
+    div.innerHTML = `
+      <div class="ws-header">
+        <span class="ws-step">${stepLabel}</span>
+        <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName || (stepLabel.split('-')[0]+'단계')}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${subName || stepLabel}</span>
+        </div>
+      </div>
+      <div class="ws-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:8px;">개선 전 RPN</div>
+            <div style="padding:12px 14px; background:var(--red-light); border-radius:var(--radius-sm); display:flex; align-items:center; gap:12px; border:1px solid rgba(176,48,48,0.2);">
+              <span style="font-size:13px; color:var(--gray-600);">S:${beforeS} × O:${beforeO} × D:${beforeD}</span>
+              <span class="before-rpn-val" style="font-size:28px; font-weight:900; color:var(--red); margin-left:auto;">${beforeRPN}</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:8px;">개선 후 예상 RPN (Paper Testing)</div>
+            <div class="paper-box" style="padding:12px 14px;">
+              <div class="paper-sliders">
+                <div class="paper-sl"><label>심각성 (S)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterS}" class="paper-slider"><span class="sl-val">${afterS}</span></div></div>
+                <div class="paper-sl"><label>발생가능성 (O)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterO}" class="paper-slider"><span class="sl-val">${afterO}</span></div></div>
+                <div class="paper-sl"><label>발견가능성 (D)</label><div class="sl-row"><input type="range" min="1" max="10" value="${afterD}" class="paper-slider"><span class="sl-val">${afterD}</span></div></div>
+              </div>
+              <div class="paper-result" style="margin-top:8px; padding:8px 10px; background:#fff; border-radius:var(--radius-sm); display:flex; align-items:center; gap:8px;">
+                <span style="font-size:13px; color:var(--gray-500);">개선 후 RPN =</span>
+                <span class="paper-rpn-val" style="font-size:24px; font-weight:900; color:var(--green); margin-left:auto;">${afterS*afterO*afterD}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    div.querySelectorAll('.paper-slider').forEach(sl => {
+      sl.addEventListener('input', () => { updatePaperRPN(sl); updateCICompare(); });
+    });
+  });
+  updateCICompare();
+}
+
+function updateCICompare() {
+  const tbl = document.getElementById('ci-compare-table');
+  if (!tbl) return;
+  const step7Items = document.querySelectorAll('#fmea-step7-container .ws-section');
+  if (step7Items.length === 0) return;
+
+  // step별 before/after CI 계산
+  const ciMap = {};
+  step7Items.forEach(item => {
+    const key = item.dataset.key || '';
+    const stepKey = key.split('-')[0];
+    const spans = item.querySelectorAll('.ws-header span');
+    const stepName = spans[1]?.textContent || ('단계' + stepKey);
+
+    // 개선 전 RPN
+    const beforeRPN = parseInt(item.querySelector('.before-rpn-val')?.textContent || '0');
+    // 개선 후 RPN
+    const afterSliders = item.querySelectorAll('.paper-slider');
+    const afterRPN = afterSliders.length >= 3
+      ? parseInt(afterSliders[0].value) * parseInt(afterSliders[1].value) * parseInt(afterSliders[2].value)
+      : 0;
+
+    if (!ciMap[stepKey]) ciMap[stepKey] = { name: stepName, before: 0, after: 0 };
+    ciMap[stepKey].before += beforeRPN;
+    ciMap[stepKey].after  += afterRPN;
+  });
+
+  const ciRows = Object.entries(ciMap).sort((a,b) => b[1].before - a[1].before);
+  if (ciRows.length === 0) return;
+
+  let html = `<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">📊 개선 전/후 CI 비교 (CI = 단계별 ΣRPN)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:var(--gray-100);">
+        <th style="padding:7px 12px;text-align:left;font-weight:700;color:var(--gray-700);">단계</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:#b03030;width:100px;">개선 전 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:#0e6b4f;width:100px;">개선 후 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:var(--blue);width:120px;">개선 전-후 CI</th>
+        <th style="padding:7px 12px;text-align:center;font-weight:700;color:var(--gray-700);width:100px;">개선율</th>
+      </tr></thead><tbody>`;
+
+  ciRows.forEach(([stepKey, ci]) => {
+    const diff = ci.after - ci.before;
+    const rate = ci.before > 0 ? Math.round((1 - ci.after/ci.before)*100) : 0;
+    const diffColor = diff < 0 ? '#0e6b4f' : diff > 0 ? '#b03030' : '#374151';
+    const diffSign = diff > 0 ? '+' : '';
+    html += `<tr style="border-bottom:1px solid var(--gray-100);">
+      <td style="padding:8px 12px;font-weight:600;color:var(--gray-900);">${ci.name}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:#b03030;">${ci.before}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:#0e6b4f;">${ci.after}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:15px;font-weight:700;color:${diffColor};">${diffSign}${diff}</td>
+      <td style="padding:8px 12px;text-align:center;">
+        <span style="font-size:13px;font-weight:700;color:${rate>0?'#0e6b4f':'#b03030'};">
+          ${rate > 0 ? '▼' : rate < 0 ? '▲' : '―'} ${Math.abs(rate)}%
+        </span>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  tbl.innerHTML = html;
+}
+
+function updatePaperRPN(slider) {
+  const box = slider.closest('.paper-box');
+  const sliders = box.querySelectorAll('input[type=range]');
+  const s = parseInt(sliders[0].value), o = parseInt(sliders[1].value), d = parseInt(sliders[2].value);
+  box.querySelectorAll('.sl-val')[0].textContent = s;
+  box.querySelectorAll('.sl-val')[1].textContent = o;
+  box.querySelectorAll('.sl-val')[2].textContent = d;
+  box.querySelector('.paper-rpn-val').textContent = s * o * d;
+}
+
+// Step 8 — Monitoring
+function initStep8() {
+  const container = document.getElementById('fmea-step8-container');
+  const redesigns = document.querySelectorAll('#fmea-step6-container .ws-section');
+
+  // JSON 불러오기로 복원된 데이터가 있으면 우선 사용
+  if (window._savedStep8 && window._savedStep8.length > 0) {
+    container.innerHTML = '';
+    const months = getMonthLabels();
+    window._savedStep8.forEach(sd => {
+      const div = document.createElement('div');
+      div.className = 'monitor-row';
+      div.innerHTML = `
+        <div class="monitor-header">
+          <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label>
+            <textarea style="min-height:50px;">${sd.redesign||''}</textarea>
+          </div>
+        </div>
+        <div class="grid4" style="margin-bottom:12px;margin-top:10px;">
+          <div class="ws-field"><label>책임자</label><input type="text" value="${sd.responsible||''}" placeholder="담당자"></div>
+          <div class="ws-field"><label>완료예정일</label><input type="text" value="${sd.deadline||''}" placeholder="완료일"></div>
+          <div class="ws-field"><label>평가지표</label><input type="text" value="${sd.kpi||''}" placeholder="지표명"></div>
+          <div class="ws-field"><label>최종결과</label><input type="text" value="${sd.result||''}" placeholder="결과 확인"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
+        <div class="month-grid">
+          ${months.map((m,mi) => `<div class="month-item"><label>${m}</label><input type="text" value="${(sd.months||[])[mi]||''}" placeholder="세부계획"></div>`).join('')}
+        </div>`;
+      container.appendChild(div);
+    });
+    window._savedStep8 = null;
+    goStep(8);
+    return;
+  }
+
+  // 일반 빌드: 6단계에서 자동 연동 (항상 최신 내용 반영)
+  const savedRows = [...container.querySelectorAll('.monitor-row')].map(row => ({
+    redesign: row.querySelector('textarea')?.value||'',
+    responsible: row.querySelectorAll('.grid4 input')[0]?.value||'',
+    deadline: row.querySelectorAll('.grid4 input')[1]?.value||'',
+    kpi: row.querySelectorAll('.grid4 input')[2]?.value||'',
+    result: row.querySelectorAll('.grid4 input')[3]?.value||'',
+    months: [...row.querySelectorAll('.month-item input')].map(m=>m.value)
+  }));
+  container.innerHTML = '';
+  redesigns.forEach((item, i) => {
+    addMonitorFromRedesign(item);
+    // 기존에 직접 입력한 값 복원 (월별계획, 최종결과 등)
+    if (savedRows[i]) {
+      const row = container.children[i];
+      if (!row) return;
+      const inp = row.querySelectorAll('.grid4 input');
+      if (inp[3] && !inp[3].value) inp[3].value = savedRows[i].result;
+      const months = row.querySelectorAll('.month-item input');
+      savedRows[i].months.forEach((v,mi) => { if (months[mi] && !months[mi].value) months[mi].value = v; });
+    }
+  });
+  if (container.children.length === 0) addMonitor();
+  goStep(8);
+}
+
+// 월 라벨 생성 헬퍼
+function getMonthLabels() {
+  const start = parseInt(document.getElementById('month-start')?.value || 1);
+  const count = parseInt(document.getElementById('month-count')?.value || 6);
+  return Array.from({length: count}, (_, i) => ((start - 1 + i) % 12 + 1) + '월');
+}
+
+// 시작 월/기간 변경 시 월 그리드 재빌드
+function rebuildMonthGrids() {
+  const labels = getMonthLabels();
+  document.querySelectorAll('#fmea-step8-container .monitor-row').forEach(row => {
+    const grid = row.querySelector('.month-grid');
+    if (!grid) return;
+    const oldVals = [...grid.querySelectorAll('input')].map(i => i.value);
+    grid.innerHTML = labels.map((m, i) =>
+      `<div class="month-item"><label>${m}</label><input type="text" value="${oldVals[i]||''}" placeholder="세부계획"></div>`
+    ).join('');
+  });
+}
+
+function addMonitorFromRedesign(item) {
+  const redesignText = item.querySelector('.redesign-box textarea')?.value || '';
+  const inputs = item.querySelectorAll('.redesign-box input');
+  const responsible = inputs[0]?.value || '';
+  const deadline = inputs[1]?.value || '';
+  const indicator = inputs[2]?.value || '';
+  const rootCause = item.querySelector('[style*="purple"]')?.textContent?.replace('근본원인: ','') || '';
+  const stepLabel = item.querySelector('.ws-step')?.textContent || '';
+  const { stepName, subName: subNameH } = getStepHeader(item);
+  const months = getMonthLabels();
+  const container = document.getElementById('fmea-step8-container');
+  const div = document.createElement('div');
+  div.className = 'monitor-row';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <span style="font-size:11px;font-weight:700;background:var(--blue);color:#fff;padding:2px 8px;border-radius:4px;">${stepLabel} ${stepName}</span>
+      ${rootCause ? `<span style="font-size:12px;color:var(--purple);font-weight:600;">근본원인: ${rootCause}</span>` : ''}
+    </div>
+    <div class="monitor-header">
+      <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;">${redesignText}</textarea></div>
+    </div>
+    <div class="grid4" style="margin-bottom:12px;margin-top:10px;">
+      <div class="ws-field"><label>책임자</label><input type="text" value="${responsible}" placeholder="담당자"></div>
+      <div class="ws-field"><label>완료예정일</label><input type="text" value="${deadline}" placeholder="완료일"></div>
+      <div class="ws-field"><label>평가지표</label><input type="text" value="${indicator}" placeholder="지표명"></div>
+      <div class="ws-field"><label>최종결과</label><input type="text" placeholder="결과 확인"></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
+    <div class="month-grid">
+      ${months.map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
+    </div>`;
+  container.appendChild(div);
+}
+
+function addMonitor() {
+  const container = document.getElementById('fmea-step8-container');
+  const months = getMonthLabels();
+  const div = document.createElement('div');
+  div.className = 'monitor-row';
+  div.innerHTML = `
+    <div class="monitor-header">
+      <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;" placeholder="개선활동 내용을 입력하세요."></textarea></div>
+    </div>
+    <div class="grid4" style="margin-bottom:12px;">
+      <div class="ws-field"><label>책임자</label><input type="text" placeholder="담당자"></div>
+      <div class="ws-field"><label>완료예정일</label><input type="text" placeholder="완료일"></div>
+      <div class="ws-field"><label>평가지표</label><input type="text" placeholder="지표명"></div>
+      <div class="ws-field"><label>최종결과</label><input type="text" placeholder="결과 확인"></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;">월별 이행관리</div>
+    <div class="month-grid">
+      ${months.map(m => `<div class="month-item"><label>${m}</label><input type="text" placeholder="세부계획"></div>`).join('')}
+    </div>`;
+  container.appendChild(div);
+}
+
+// 기타 선정근거 토글
+function toggleReasonOther(cb) {
+  const inp = document.getElementById('reason_other');
+  inp.style.display = cb.checked ? 'block' : 'none';
+  if (cb.checked) inp.focus();
+}
+
+// 피시본 다이어그램
+function showFishbone() {
+  const container = document.getElementById('fishbone-container');
+  container.classList.toggle('hidden');
+  if (container.classList.contains('hidden')) return;
+
+  const items = document.querySelectorAll('#fmea-step5-container .ws-section');
+  const effectName = document.getElementById('fishbone-problem')?.value?.trim()
+    || document.getElementById('proc_name').value
+    || '분석 대상 프로세스';
+
+  const categories = {};
+  items.forEach(item => {
+    const stepName = item.querySelector('.ws-header span:nth-child(2)')?.textContent || '단계';
+    const whyInputs = item.querySelectorAll('.why-box input[type=text]');
+    const causes = [];
+    // Why 1~4 수집
+    for (let i = 0; i < Math.min(whyInputs.length - 1, 4); i++) {
+      const v = whyInputs[i]?.value?.trim();
+      if (v) causes.push(v);
+    }
+    // 근본원인
+    const rootCause = item.querySelector('.root-cause-field input')?.value?.trim();
+    if (rootCause) causes.push('→ ' + rootCause);
+    if (causes.length > 0) categories[stepName] = causes;
+  });
+
+  // 3단계 원인도 fallback으로 읽기
+  if (Object.keys(categories).length === 0) {
+    document.querySelectorAll('#fmea-step3-container .ws-section').forEach(item => {
+      const headerInputs = item.querySelectorAll('.ws-header input');
+      const stepName = headerInputs[0]?.value || '단계';
+      const textareas = item.querySelectorAll('textarea');
+      const cause = textareas[1]?.value?.trim();
+      if (cause) {
+        if (!categories[stepName]) categories[stepName] = [];
+        cause.split('\n').forEach(c => { if (c.trim()) categories[stepName].push(c.trim()); });
+      }
+    });
+  }
+
+  const cats = Object.keys(categories);
+  if (cats.length === 0) {
+    container.innerHTML = `<div class="fishbone-wrap"><p style="color:var(--gray-400);font-size:13px;">💡 원인 입력칸에 내용을 작성한 후 버튼을 다시 눌러주세요.</p></div>`;
+    return;
+  }
+
+  const W = 920, H = 440;
+  const spineY = H / 2;
+  const headX = W - 110;
+  const tailX = 60;
+  const colors = ['#1a5fa8','#0e6b4f','#8a5e00','#b03030','#6d28d9','#c2410c','#0891b2','#be185d'];
+
+  let bones = '';
+  const half = Math.ceil(cats.length / 2);
+  cats.forEach((cat, idx) => {
+    const isTop = idx < half;
+    const pos = isTop ? idx : idx - half;
+    const totalSide = isTop ? half : cats.length - half;
+    const x = tailX + (headX - tailX - 100) * (pos + 1) / (totalSide + 1);
+    const dy = isTop ? -120 : 120;
+    const color = colors[idx % colors.length];
+    const causes = categories[cat];
+
+    // 경사 뼈대
+    bones += `<line x1="${x}" y1="${spineY + dy}" x2="${x + 40}" y2="${spineY}" stroke="${color}" stroke-width="2.5"/>`;
+    // 카테고리 라벨 박스
+    const label = cat.length > 9 ? cat.substring(0,9)+'…' : cat;
+    bones += `<rect x="${x - 46}" y="${isTop ? spineY+dy-32 : spineY+dy+6}" width="92" height="26" rx="5" fill="${color}"/>`;
+    bones += `<text x="${x}" y="${isTop ? spineY+dy-14 : spineY+dy+23}" text-anchor="middle" font-size="11" font-weight="700" fill="white">${label}</text>`;
+
+    // 원인 항목들
+    causes.slice(0, 4).forEach((c, ci) => {
+      const offset = 30 + ci * 22;
+      const bx = x - 18 - ci * 8;
+      const by = isTop ? spineY + dy - offset : spineY + dy + offset;
+      const short = c.length > 13 ? c.substring(0,13)+'…' : c;
+      bones += `<line x1="${bx}" y1="${isTop ? spineY+dy-8 : spineY+dy+8}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>`;
+      bones += `<text x="${bx}" y="${by}" text-anchor="middle" font-size="10" fill="${color}" opacity="0.9">${short}</text>`;
+    });
+  });
+
+  container.innerHTML = `
+    <div class="fishbone-wrap">
+      <h3>🐟 피시본 다이어그램 — ${effectName}</h3>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;background:#fafbfc;">
+        <line x1="${tailX}" y1="${spineY}" x2="${headX}" y2="${spineY}" stroke="#374151" stroke-width="3"/>
+        <polygon points="${headX},${spineY} ${headX-16},${spineY-8} ${headX-16},${spineY+8}" fill="#374151"/>
+        <rect x="${headX}" y="${spineY-32}" width="100" height="64" rx="7" fill="#1a5fa8"/>
+        <text x="${headX+50}" y="${spineY-14}" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,0.75)">▶ 분석 대상</text>
+        <text x="${headX+50}" y="${spineY+2}" text-anchor="middle" font-size="10" font-weight="700" fill="white">${effectName.length>9?effectName.substring(0,9)+'…':effectName}</text>
+        <text x="${headX+50}" y="${spineY+18}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.8)">${effectName.length>9?effectName.substring(9,18)+(effectName.length>18?'…':''):'프로세스'}</text>
+        ${bones}
+      </svg>
+      <p style="font-size:12px;color:var(--gray-400);margin-top:8px;">※ 원인 입력 후 버튼을 다시 누르면 최신 내용으로 업데이트됩니다.</p>
+    </div>`;
+}
+
+// ===== 파일 저장/불러오기 =====
+function saveFMEA() {
+  const data = { version: 2, savedAt: new Date().toISOString() };
+  data.step1 = {
+    proc_name: document.getElementById('proc_name').value,
+    analysis_date: document.getElementById('analysis_date').value,
+    department: document.getElementById('department').value,
+    proc_scope: document.getElementById('proc_scope').value,
+    reasons: [...document.querySelectorAll('input[name=reason]:checked')].map(c=>c.value),
+    reason_other: document.getElementById('reason_other').value,
+    team: [...document.querySelectorAll('#team-list .member-row')].map(r=>({
+      role: r.querySelector('select').value,
+      dept: r.querySelectorAll('input')[0]?.value||'',
+      name: r.querySelectorAll('input')[1]?.value||''
+    })),
+    checklist: [...document.querySelectorAll('#checklist input[type=checkbox]')].map(c=>c.checked)
+  };
+  data.step2 = [...document.querySelectorAll('#process-steps-list .proc-item')].map(s=>({
+    stepName: s.querySelector('input').value,
+    subs: [...s.querySelectorAll('.proc-sub-item input')].map(i=>i.value)
+  }));
+  data.step3 = [...document.querySelectorAll('#fmea-step3-container .ws-section')].map(item=>({
+    key: item.dataset.key,
+    stepName: item.querySelector('.ws-header > div > span:first-child')?.textContent||'',
+    subName: item.querySelector('.sub-name-input')?.value||'',
+    rows: [...item.querySelectorAll('.ws-row.cols3')].map(row=>({
+      failure: row.querySelectorAll('textarea')[0]?.value||'',
+      cause: row.querySelectorAll('textarea')[1]?.value||'',
+      effect: row.querySelectorAll('textarea')[2]?.value||''
+    }))
+  }));
+  data.step4 = [...document.querySelectorAll('#fmea-step4-container .ws-section')].map(item=>{
+    const sl = item.querySelectorAll('input[type=range]');
+    return { key: item.dataset.key, s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
+      scope: item.querySelector('select')?.value||'', priority: item.querySelector('input[type=text]')?.value||'' };
+  });
+  data.step5 = [...document.querySelectorAll('#fmea-step5-container .ws-section')].map(item=>{
+    const inp = item.querySelectorAll('input[type=text]');
+    return { key: item.dataset.key, w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', root:inp[4]?.value||'' };
+  });
+  data.step6 = [...document.querySelectorAll('#fmea-step6-container .ws-section')].map(item=>{
+    const inp = item.querySelectorAll('.redesign-box input[type=text]');
+    return { key: item.dataset.key, redesign: item.querySelector('textarea')?.value||'', responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'' };
+  });
+  data.step8 = [...document.querySelectorAll('#fmea-step8-container .monitor-row')].map(row=>{
+    const inp = row.querySelectorAll('.grid4 input[type=text]');
+    const months = row.querySelectorAll('.month-item input');
+    return { redesign: row.querySelector('textarea')?.value||'',
+      responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'', result:inp[3]?.value||'',
+      months:[...months].map(m=>m.value) };
+  });
+  const procName = data.step1.proc_name || 'FMEA';
+  const dateStr = data.step1.analysis_date || new Date().toISOString().slice(0,10);
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FMEA_${procName}_${dateStr}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  alert('✅ 저장 완료!\n파일: FMEA_' + procName + '_' + dateStr + '.json');
+}
+
+function loadFMEA(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { restoreFMEA(JSON.parse(e.target.result)); }
+    catch(err) { alert('❌ 파일을 읽을 수 없습니다.'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function restoreFMEA(data) {
+  if (data.step1) {
+    const s = data.step1;
+    document.getElementById('proc_name').value = s.proc_name||'';
+    document.getElementById('analysis_date').value = s.analysis_date||'';
+    document.getElementById('department').value = s.department||'';
+    document.getElementById('proc_scope').value = s.proc_scope||'';
+    document.querySelectorAll('input[name=reason]').forEach(cb=>{ cb.checked = (s.reasons||[]).includes(cb.value); });
+    const otherInp = document.getElementById('reason_other');
+    if ((s.reasons||[]).includes('기타')) { otherInp.style.display='block'; otherInp.value = s.reason_other||''; }
+    const teamList = document.getElementById('team-list');
+    teamList.innerHTML = '';
+    (s.team||[]).forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      const roles=['팀장','간사','팀원'];
+      row.innerHTML = `<select>${roles.map(r=>`<option${r===m.role?' selected':''}>${r}</option>`).join('')}</select><input type="text" value="${m.dept}" placeholder="소속부서/직위"><input type="text" value="${m.name}" placeholder="이름">`;
+      teamList.appendChild(row);
+    });
+    if (!(s.team||[]).length) { addMember(); addMember(); }
+    const checks = document.querySelectorAll('#checklist input[type=checkbox]');
+    (s.checklist||[]).forEach((v,i)=>{ if(checks[i]) checks[i].checked = v; });
+  }
+  if (data.step2 && data.step2.length > 0) {
+    const list = document.getElementById('process-steps-list');
+    list.innerHTML = '';
+    data.step2.forEach((step, si) => {
+      const n = si + 1;
+      const div = document.createElement('div');
+      div.className = 'proc-item'; div.dataset.step = n;
+      const subsHtml = step.subs.map((sub, subI) =>
+        `<div class="proc-sub-item"><span class="proc-sub-num">${n}-${subI+1}</span><input type="text" value="${sub}" placeholder="하부단계 내용" style="flex:1;"><button class="proc-sub-del" onclick="delSub(this)">×</button></div>`
+      ).join('');
+      div.innerHTML = `<div class="proc-num">${n}단계</div>
+        <div class="proc-right"><input type="text" value="${step.stepName}" placeholder="단계 ${n} 명칭" style="margin-bottom:8px;">
+          <div class="proc-sub-list" id="sublist-${n}">${subsHtml}</div>
+          <button class="btn btn-ghost btn-sm" onclick="addSubStep(${n})" style="margin-top:4px;font-size:12px;">+ 하부단계 추가</button>
+        </div><button class="proc-del" onclick="delProcessStep(this)">×</button>`;
+      list.appendChild(div);
+    });
+  }
+  if (data.step3 && data.step3.length > 0) {
+    const c3 = document.getElementById('fmea-step3-container');
+    c3.innerHTML = '';
+    data.step3.forEach(item => {
+      // 구버전 호환: stepName/subName이 비어있으면 2단계에서 찾기
+      let stepName = item.stepName || '';
+      let subName  = item.subName  || '';
+      // key로 2단계에서 단계명/하부단계명 찾기 (구버전 JSON 보완)
+      if (!stepName || !subName) {
+        const keyParts = (item.key||'').split('-');
+        const stepIdx = parseInt(keyParts[0]) - 1;
+        const subIdx  = parseInt(keyParts[1]) - 1;
+        const procItems = document.querySelectorAll('#process-steps-list .proc-item');
+        if (procItems[stepIdx]) {
+          stepName = stepName || procItems[stepIdx].querySelector('input')?.value || '';
+          const subInputs = procItems[stepIdx].querySelectorAll('.proc-sub-item input');
+          subName = subName || subInputs[subIdx]?.value || '';
+        }
+      }
+      const div = buildStep3Item({ key: item.key, stepName, subName });
+      const body = div.querySelector('.ws-body');
+      const addBtn = body.querySelector('.btn');
+      const rows = div.querySelectorAll('.ws-row.cols3');
+      if (item.rows && item.rows.length > 0) {
+        const r0 = item.rows[0];
+        rows[0].querySelectorAll('textarea')[0].value = r0.failure||'';
+        rows[0].querySelectorAll('textarea')[1].value = r0.cause||'';
+        rows[0].querySelectorAll('textarea')[2].value = r0.effect||'';
+        for (let i = 1; i < item.rows.length; i++) {
+          const r = item.rows[i];
+          const extra = document.createElement('div');
+          extra.className = 'extra-failure-row';
+          extra.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);';
+          extra.innerHTML = `
+            <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+              <button class="btn btn-sm" onclick="this.closest('.extra-failure-row').remove()"
+                style="background:var(--red-light);color:var(--red);border:1px solid var(--red);font-size:11px;padding:2px 10px;border-radius:4px;cursor:pointer;">
+                ✕ 이 행 삭제
+              </button>
+            </div>
+            <div class="ws-row cols3">
+              <div class="ws-field"><label>잠재적 고장유형</label><textarea>${r.failure||''}</textarea></div>
+              <div class="ws-field"><label>잠재적 원인</label><textarea>${r.cause||''}</textarea></div>
+              <div class="ws-field"><label>잠재적 영향</label><textarea>${r.effect||''}</textarea></div>
+            </div>`;
+          body.insertBefore(extra, addBtn);
+        }
+      }
+      c3.appendChild(div);
+    });
+  }
+  // 4-8단계 데이터 보관 → 각 단계 빌드 시 복원
+  if (data.step4) window._savedStep4 = data.step4;
+  if (data.step5) window._savedStep5 = data.step5;
+  if (data.step6) window._savedStep6 = data.step6;
+  if (data.step8) window._savedStep8 = data.step8;
+  // 복원 배너
+  const content = document.querySelector('.page-content');
+  const old = content.querySelector('.restore-banner');
+  if (old) old.remove();
+  const banner = document.createElement('div');
+  banner.className = 'restore-banner';
+  banner.innerHTML = `✅ 파일 불러오기 완료! <strong>${data.step1?.proc_name||'FMEA'}</strong> 작업을 이어서 진행할 수 있습니다. <button class="btn btn-ghost btn-sm" onclick="this.closest('.restore-banner').remove()" style="margin-left:auto;">닫기</button>`;
+  content.insertBefore(banner, content.firstChild);
+  goStep(1);
+}
+
+// ===== 날짜 형식 변환 헬퍼 =====
+function fmtDate(raw) {
+  if (!raw) return '';
+  const d = new Date(raw + 'T00:00:00');
+  if (isNaN(d.getTime())) return raw;
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+}
+
+// Word 다운로드
+function downloadWord() {
+  const procName = document.getElementById('proc_name').value || 'FMEA 분석';
+  const dept = document.getElementById('department').value || '';
+  const dateRaw = document.getElementById('analysis_date').value || '';
+  const date = fmtDate(dateRaw);
+  const scope = document.getElementById('proc_scope').value || '';
+  const printDate = fmtDate(new Date().toISOString().slice(0,10));
+
+  // 팀 구성
+  let teamRows = '';
+  document.querySelectorAll('#team-list .member-row').forEach(row => {
+    const role = row.querySelector('select').value;
+    const inputs = row.querySelectorAll('input');
+    const dept2 = inputs[0]?.value || '';
+    const name = inputs[1]?.value || '';
+    teamRows += `<tr><td>${role}</td><td>${dept2}</td><td>${name}</td></tr>`;
+  });
+
+  // 안전하게 헤더 읽는 헬퍼
+  function getHeaderInfo(item) {
+    const stepLabel = item.querySelector('.ws-step')?.textContent || '';
+    // 새 구조: span(단계명) + input.sub-name-input(하부단계명) 또는 span+span
+    const subInput = item.querySelector('.sub-name-input');
+    const headerDiv = item.querySelector('.ws-header > div');
+    const spans = headerDiv ? [...headerDiv.querySelectorAll('span')] : [];
+    if (subInput !== null) {
+      return { stepLabel, stepName: spans[0]?.textContent||'', subName: subInput.value||'' };
+    }
+    return { stepLabel, stepName: spans[0]?.textContent||'', subName: spans[1]?.textContent||'' };
+  }
+
+  // 3단계 데이터
+  let step3Rows = '';
+  document.querySelectorAll('#fmea-step3-container .ws-section').forEach(item => {
+    const { stepLabel, stepName, subName } = getHeaderInfo(item);
+    item.querySelectorAll('.ws-row.cols3').forEach(row => {
+      const tas = row.querySelectorAll('textarea');
+      if (tas.length >= 3) {
+        const f = tas[0].value || '', c = tas[1].value || '', e = tas[2].value || '';
+        if (f || c || e) {
+          step3Rows += `<tr><td>${stepLabel}</td><td>${stepName}</td><td>${subName}</td><td>${f}</td><td>${c}</td><td>${e}</td></tr>`;
+        }
+      }
+    });
+  });
+
+  // 4단계 RPN
+  let rpnRows = '';
+  document.querySelectorAll('#fmea-step4-container .ws-section').forEach(item => {
+    const { stepLabel, stepName } = getHeaderInfo(item);
+    const sliders = item.querySelectorAll('input[type=range]');
+    if (sliders.length >= 3) {
+      const s = sliders[0].value, o = sliders[1].value, d = sliders[2].value;
+      const rpn = parseInt(s)*parseInt(o)*parseInt(d);
+      const sel = item.querySelector('select')?.value || '';
+      const priority = item.querySelector('input[type=text]')?.value || '';
+      rpnRows += `<tr><td>${stepLabel} ${stepName}</td><td style="text-align:center">${s}</td><td style="text-align:center">${o}</td><td style="text-align:center">${d}</td><td style="text-align:center;font-weight:bold">${rpn}</td><td>${sel}</td><td>${priority}</td></tr>`;
+    }
+  });
+
+  // 5Why
+  let whyRows = '';
+  document.querySelectorAll('#fmea-step5-container .ws-section').forEach(item => {
+    const { stepLabel, stepName, subName } = getHeaderInfo(item);
+    const inputs = item.querySelectorAll('input[type=text]');
+    const w1=inputs[0]?.value||'', w2=inputs[1]?.value||'', w3=inputs[2]?.value||'', w4=inputs[3]?.value||'', w5=inputs[4]?.value||'', root=inputs[5]?.value||'';
+    whyRows += `<tr><td>${stepLabel}</td><td>${stepName}</td><td>${subName}</td><td>${w1}</td><td>${w2}</td><td>${w3}</td><td>${w4||w5}</td><td><strong>${root}</strong></td></tr>`;
+  });
+
+  // 6단계 재설계
+  let redesignRows = '';
+  document.querySelectorAll('#fmea-step6-container .ws-section').forEach(item => {
+    const { stepLabel, stepName, subName } = getHeaderInfo(item);
+    const ta = item.querySelector('textarea')?.value || '';
+    const inputs = item.querySelectorAll('.redesign-box input');
+    const resp=inputs[0]?.value||'', dead=inputs[1]?.value||'', kpi=inputs[2]?.value||'';
+    redesignRows += `<tr><td>${stepLabel}</td><td>${stepName} ${subName}</td><td>${ta}</td><td>${resp}</td><td>${dead}</td><td>${kpi}</td></tr>`;
+  });
+
+  // 7단계 Paper Testing
+  let paperRows = '';
+  document.querySelectorAll('#fmea-step7-container .ws-section').forEach(item => {
+    const { stepLabel, stepName, subName } = getHeaderInfo(item);
+    const beforeRPN = item.querySelector('.before-rpn-val')?.textContent || '';
+    const sliders = item.querySelectorAll('.paper-slider');
+    const s=sliders[0]?.value||'', o=sliders[1]?.value||'', d=sliders[2]?.value||'';
+    const afterRPN = s&&o&&d ? parseInt(s)*parseInt(o)*parseInt(d) : '';
+    const diff = beforeRPN && afterRPN ? parseInt(afterRPN)-parseInt(beforeRPN) : '';
+    const rate = beforeRPN && afterRPN ? Math.round((1-parseInt(afterRPN)/parseInt(beforeRPN))*100) : '';
+    paperRows += `<tr><td>${stepLabel}</td><td>${stepName}</td><td>${subName}</td><td>${beforeRPN}</td><td>${s}</td><td>${o}</td><td>${d}</td><td><strong>${afterRPN}</strong></td><td style="color:${diff<0?'#0e6b4f':'#b03030'}">${diff>0?'+':''}${diff}</td><td>${rate>0?'▼'+rate+'%':rate<0?'▲'+Math.abs(rate)+'%':'-'}</td></tr>`;
+  });
+
+  // 8단계 모니터링
+  const monthStart = parseInt(document.getElementById('month-start')?.value||1);
+  const monthCount = parseInt(document.getElementById('month-count')?.value||6);
+  const monthLabels = Array.from({length:monthCount},(_,i)=>((monthStart-1+i)%12+1)+'월');
+  let monitorRows = '';
+  document.querySelectorAll('#fmea-step8-container .monitor-row').forEach(row => {
+    const ta = row.querySelector('textarea')?.value||'';
+    const inputs = row.querySelectorAll('.grid4 input');
+    const resp=inputs[0]?.value||'', dead=inputs[1]?.value||'', kpi=inputs[2]?.value||'', result=inputs[3]?.value||'';
+    const months = [...row.querySelectorAll('.month-grid input')].map(m=>m.value||'').join(' / ');
+    monitorRows += `<tr><td>${ta}</td><td>${resp}</td><td>${dead}</td><td>${kpi}</td><td>${result}</td><td style="font-size:9pt;">${months}</td></tr>`;
+  });
+  const monthHeader = monthLabels.map(m=>`<th>${m}</th>`).join('');
+
+  const html = `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'>
+<style>
+  body { font-family: '맑은 고딕', Arial, sans-serif; font-size: 11pt; margin: 2.5cm 2cm; line-height: 1.5; }
+  h1 { font-size: 17pt; color: #0f4080; border-bottom: 2px solid #0f4080; padding-bottom: 8px; margin-bottom: 6px; }
+  .doc-meta { font-size: 10pt; color: #555; margin-bottom: 20px; }
+  h2 { font-size: 12pt; color: #1a5fa8; margin-top: 22px; margin-bottom: 8px; background: #eaf1fb; padding: 5px 10px; border-left: 4px solid #1a5fa8; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 14px; font-size: 10pt; table-layout: fixed; }
+  th { background: #1a5fa8; color: white; padding: 6px 7px; text-align: left; font-weight: bold; word-break: keep-all; }
+  td { border: 1px solid #c4cad5; padding: 5px 7px; vertical-align: top; word-break: break-all; }
+  tr:nth-child(even) td { background: #f5f6f8; }
+  .info-table { table-layout: fixed; }
+  .info-table td:first-child { font-weight: bold; color: #374151; width: 110pt; background: #eceef2; }
+  .rpn-high { color: #b03030; font-weight: bold; }
+  .rpn-mid { color: #8a5e00; font-weight: bold; }
+  .footer { margin-top: 28px; font-size: 9pt; color: #888; border-top: 1px solid #dde1e9; padding-top: 8px; text-align: right; }
+</style>
+</head>
+<body>
+<h1>FMEA 분석 보고서</h1>
+<div class="doc-meta">📋 ${procName} &nbsp;|&nbsp; ${dept} &nbsp;|&nbsp; 분석일: ${date} &nbsp;|&nbsp; 출력일: ${printDate}</div>
+
+<h2>■ 기본정보</h2>
+<table class="info-table">
+  <colgroup><col style="width:110pt"><col></colgroup>
+  <tr><td>프로세스명</td><td>${procName}</td></tr>
+  <tr><td>부서/부문</td><td>${dept}</td></tr>
+  <tr><td>분석일자</td><td>${date}</td></tr>
+  <tr><td>분석 범위 및 목적</td><td>${scope}</td></tr>
+</table>
+
+<h2>■ 팀 구성</h2>
+<table>
+  <colgroup><col style="width:15%"><col style="width:40%"><col style="width:45%"></colgroup>
+  <tr><th>역할</th><th>소속부서/직위</th><th>이름</th></tr>
+  ${teamRows || '<tr><td colspan="3">-</td></tr>'}
+</table>
+
+<h2>■ 3단계 — 잠재적 고장유형 분석</h2>
+<table>
+  <colgroup><col style="width:7%"><col style="width:13%"><col style="width:18%"><col style="width:22%"><col style="width:20%"><col style="width:20%"></colgroup>
+  <tr><th>단계</th><th>프로세스</th><th>하부단계</th><th>잠재적 고장유형</th><th>잠재적 원인</th><th>잠재적 영향</th></tr>
+  ${step3Rows || '<tr><td colspan="6">데이터 없음</td></tr>'}
+</table>
+
+<h2>■ 4단계 — RPN 우선순위</h2>
+<table>
+  <colgroup><col style="width:28%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:16%"><col style="width:12%"></colgroup>
+  <tr><th>단계/프로세스</th><th>심각성(S)</th><th>발생가능성(O)</th><th>발견가능성(D)</th><th>RPN</th><th>개선활동 범위</th><th>우선순위</th></tr>
+  ${rpnRows || '<tr><td colspan="7">데이터 없음</td></tr>'}
+</table>
+
+<h2>■ 5단계 — 근본원인 (5Why)</h2>
+<table>
+  <colgroup><col style="width:6%"><col style="width:12%"><col style="width:14%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:16%"></colgroup>
+  <tr><th>단계</th><th>프로세스</th><th>하부단계</th><th>Why 1</th><th>Why 2</th><th>Why 3</th><th>Why 4~5</th><th>근본원인</th></tr>
+  ${whyRows || '<tr><td colspan="8">데이터 없음</td></tr>'}
+</table>
+
+<h2>■ 6단계 — 프로세스 재설계</h2>
+<table>
+  <colgroup><col style="width:6%"><col style="width:20%"><col style="width:32%"><col style="width:12%"><col style="width:14%"><col style="width:16%"></colgroup>
+  <tr><th>단계</th><th>단계/하부단계</th><th>재설계 내용</th><th>책임자</th><th>완료예정일</th><th>평가지표</th></tr>
+  ${redesignRows || '<tr><td colspan="6">데이터 없음</td></tr>'}
+</table>
+
+<h2>■ 7단계 — Paper Testing (개선 전/후 RPN 비교)</h2>
+<table>
+  <colgroup><col style="width:6%"><col style="width:13%"><col style="width:15%"><col style="width:10%"><col style="width:7%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
+  <tr><th>단계</th><th>프로세스</th><th>하부단계</th><th>개선 전 RPN</th><th>S</th><th>O</th><th>D</th><th>개선 후 RPN</th><th>차이</th><th>개선율</th></tr>
+  ${paperRows || '<tr><td colspan="10">데이터 없음</td></tr>'}
+</table>
+
+<h2>■ 8단계 — 적용 및 모니터링</h2>
+<table>
+  <colgroup><col style="width:22%"><col style="width:10%"><col style="width:10%"><col style="width:14%"><col style="width:10%"><col></colgroup>
+  <tr><th>재설계 내용</th><th>책임자</th><th>완료예정일</th><th>평가지표</th><th>최종결과</th><th>월별 이행계획 (${monthLabels.join(' / ')})</th></tr>
+  ${monitorRows || '<tr><td colspan="6">데이터 없음</td></tr>'}
+</table>
+
+<div class="footer">작성: ${printDate} &nbsp;|&nbsp; 대한환자안전질향상간호사회 FMEA Toolkit 기반</div>
+</body></html>`;
+
+  const blob = new Blob(['\ufeff' + html], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `FMEA_${procName}_${dateRaw || '보고서'}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 구글 시트 복사
+function copyToSheet() {
+  const items = document.querySelectorAll('#fmea-step3-container .ws-section');
+  if (items.length === 0) { alert('3단계에서 데이터를 먼저 입력해주세요.'); return; }
+
+  function getH(item) {
+    const stepLabel = item.querySelector('.ws-step')?.textContent || '';
+    const inputs = item.querySelectorAll('.ws-header input');
+    if (inputs.length >= 2) return { stepLabel, stepName: inputs[0].value||'', subName: inputs[1].value||'' };
+    const spans = item.querySelectorAll('.ws-header span');
+    return { stepLabel, stepName: spans[1]?.textContent||'', subName: spans[2]?.textContent||'' };
+  }
+
+  let tsv = '단계\t하부단계\t잠재적 고장유형\t잠재적 원인\t잠재적 영향\n';
+  items.forEach(item => {
+    const { stepLabel, stepName, subName } = getH(item);
+    const rows = item.querySelectorAll('.ws-row.cols3');
+    rows.forEach(row => {
+      const tas = row.querySelectorAll('textarea');
+      if (tas.length >= 3) {
+        const failure = tas[0].value.replace(/\n/g,' ');
+        const cause = tas[1].value.replace(/\n/g,' ');
+        const effect = tas[2].value.replace(/\n/g,' ');
+        if (failure || cause || effect) {
+          tsv += `${stepLabel} ${stepName}\t${subName}\t${failure}\t${cause}\t${effect}\n`;
+        }
+      }
+    });
+  });
+
+  // RPN 데이터도 추가
+  const rpnItems = document.querySelectorAll('#fmea-step4-container .ws-section');
+  if (rpnItems.length > 0) {
+    tsv += '\n단계\t심각성(S)\t발생가능성(O)\t발견가능성(D)\tRPN\t우선순위\n';
+    rpnItems.forEach(item => {
+      const { stepLabel, stepName } = getH(item);
+      const sliders = item.querySelectorAll('input[type=range]');
+      if (sliders.length >= 3) {
+        const s = sliders[0].value, o = sliders[1].value, d = sliders[2].value;
+        const rpn = parseInt(s)*parseInt(o)*parseInt(d);
+        const priority = item.querySelector('input[type=text]')?.value || '';
+        tsv += `${stepLabel} ${stepName}\t${s}\t${o}\t${d}\t${rpn}\t${priority}\n`;
+      }
+    });
+  }
+
+  navigator.clipboard.writeText(tsv).then(() => {
+    alert('✅ 클립보드에 복사되었습니다!\n구글 시트 또는 엑셀을 열고 Ctrl+V로 붙여넣으세요.');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ 복사되었습니다! 구글 시트에서 Ctrl+V로 붙여넣으세요.');
+  });
+}
+
+// 전체 PDF 출력
+function printReport() {
+  document.body.classList.add('print-mode');
+  for (let i = 1; i <= 8; i++) {
+    const el = document.getElementById('step' + i);
+    if (el) el.classList.remove('hidden');
+  }
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('print-mode');
+      const badge = document.getElementById('stepBadge');
+      const cur = badge ? parseInt(badge.textContent.split('/')[0].trim()) : 8;
+      for (let i = 1; i <= 8; i++) {
+        const el = document.getElementById('step' + i);
+        if (el && i !== cur) el.classList.add('hidden');
+      }
+    }, 500);
+  }, 300);
+}
+
+// Init step 2 on first load
+initStep2();
+
+// 저장 데이터 복원 패치: 단계 이동 시 자동 복원
+function goStep(n) {
+  _goStepBase(n);
+  if (n === 4 && window._savedStep4) {
+    setTimeout(() => {
+      window._savedStep4.forEach(sd => {
+        const item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${sd.key}"]`);
+        if (!item) return;
+        const sl = item.querySelectorAll('input[type=range]');
+        if (sl[0]) { sl[0].value = sd.s; sl[1].value = sd.o; sl[2].value = sd.d; updateRPN4(sl[0]); }
+        const sel = item.querySelector('select');
+        if (sel) sel.value = sd.scope||'';
+        const pri = item.querySelector('input[type=text]');
+        if (pri) pri.value = sd.priority||'';
+      });
+      window._savedStep4 = null;
+    }, 50);
+  }
+  if (n === 5 && window._savedStep5) {
+    setTimeout(() => {
+      window._savedStep5.forEach(sd => {
+        const item = document.querySelector(`#fmea-step5-container .ws-section[data-key="${sd.key}"]`);
+        if (!item) return;
+        const inp = item.querySelectorAll('input[type=text]');
+        if (inp[0]) inp[0].value = sd.w1||'';
+        if (inp[1]) inp[1].value = sd.w2||'';
+        if (inp[2]) inp[2].value = sd.w3||'';
+        if (inp[3]) inp[3].value = sd.w4||'';
+        if (inp[4]) inp[4].value = sd.root||'';
+      });
+      window._savedStep5 = null;
+    }, 50);
+  }
+  if (n === 6 && window._savedStep6) {
+    setTimeout(() => {
+      window._savedStep6.forEach(sd => {
+        const item = document.querySelector(`#fmea-step6-container .ws-section[data-key="${sd.key}"]`);
+        if (!item) return;
+        const ta = item.querySelector('textarea');
+        if (ta) ta.value = sd.redesign||'';
+        const inp = item.querySelectorAll('.redesign-box input[type=text]');
+        if (inp[0]) inp[0].value = sd.responsible||'';
+        if (inp[1]) inp[1].value = sd.deadline||'';
+        if (inp[2]) inp[2].value = sd.kpi||'';
+      });
+      window._savedStep6 = null;
+    }, 50);
+  }
+  if (n === 8 && window._savedStep8) {
+    setTimeout(() => {
+      const rows = document.querySelectorAll('#fmea-step8-container .monitor-row');
+      window._savedStep8.forEach((sd, i) => {
+        const row = rows[i];
+        if (!row) return;
+        const ta = row.querySelector('textarea');
+        if (ta) ta.value = sd.redesign||'';
+        const inp = row.querySelectorAll('.grid4 input[type=text]');
+        if (inp[0]) inp[0].value = sd.responsible||'';
+        if (inp[1]) inp[1].value = sd.deadline||'';
+        if (inp[2]) inp[2].value = sd.kpi||'';
+        if (inp[3]) inp[3].value = sd.result||'';
+        const months = row.querySelectorAll('.month-item input');
+        (sd.months||[]).forEach((v,mi) => { if (months[mi]) months[mi].value = v; });
+      });
+      window._savedStep8 = null;
+    }, 50);
+  }
+}
+
+// ── 자동저장 (localStorage) ──
+const AUTO_KEY = 'fmea_autosave';
+
+function autoSave() {
+  try {
+    // saveFMEA 로직 재사용하되 파일 다운로드 없이 localStorage에만 저장
+    const data = { version:2, savedAt: new Date().toISOString(), auto: true };
+    data.step1 = {
+      proc_name: document.getElementById('proc_name').value,
+      analysis_date: document.getElementById('analysis_date').value,
+      department: document.getElementById('department').value,
+      proc_scope: document.getElementById('proc_scope').value,
+      reasons: [...document.querySelectorAll('input[name=reason]:checked')].map(c=>c.value),
+      reason_other: document.getElementById('reason_other').value,
+      team: [...document.querySelectorAll('#team-list .member-row')].map(r=>({
+        role: r.querySelector('select').value,
+        dept: r.querySelectorAll('input')[0]?.value||'',
+        name: r.querySelectorAll('input')[1]?.value||''
+      })),
+      checklist: [...document.querySelectorAll('#checklist input[type=checkbox]')].map(c=>c.checked)
+    };
+    data.step2 = [...document.querySelectorAll('#process-steps-list .proc-item')].map(s=>({
+      stepName: s.querySelector('input').value,
+      subs: [...s.querySelectorAll('.proc-sub-item input')].map(i=>i.value)
+    }));
+    data.step3 = [...document.querySelectorAll('#fmea-step3-container .ws-section')].map(item=>({
+      key: item.dataset.key,
+      stepName: item.querySelector('.ws-header > div > span:first-child')?.textContent||'',
+      subName: item.querySelector('.sub-name-input')?.value||'',
+      rows: [...item.querySelectorAll('.ws-row.cols3')].map(row=>({
+        failure: row.querySelectorAll('textarea')[0]?.value||'',
+        cause: row.querySelectorAll('textarea')[1]?.value||'',
+        effect: row.querySelectorAll('textarea')[2]?.value||''
+      }))
+    }));
+    data.step4 = [...document.querySelectorAll('#fmea-step4-container .ws-section')].map(item=>{
+      const sl = item.querySelectorAll('input[type=range]');
+      return { key:item.dataset.key, s:sl[0]?.value||5, o:sl[1]?.value||5, d:sl[2]?.value||5,
+        scope:item.querySelector('select')?.value||'', priority:item.querySelector('input[type=text]')?.value||'' };
+    });
+    data.step5 = [...document.querySelectorAll('#fmea-step5-container .ws-section')].map(item=>{
+      const inp = item.querySelectorAll('input[type=text]');
+      return { key:item.dataset.key, w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
+    });
+    data.step6 = [...document.querySelectorAll('#fmea-step6-container .ws-section')].map(item=>{
+      const inp = item.querySelectorAll('.redesign-box input');
+      return { key:item.dataset.key, redesign:item.querySelector('textarea')?.value||'', responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'' };
+    });
+    localStorage.setItem(AUTO_KEY, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function checkAutoSave() {
+  try {
+    const raw = localStorage.getItem(AUTO_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data.step1?.proc_name && !data.step1?.analysis_date) return;
+    const saved = new Date(data.savedAt).toLocaleString('ko-KR');
+    const banner = document.createElement('div');
+    banner.className = 'restore-banner';
+    banner.id = 'auto-restore-banner';
+    banner.innerHTML = `💾 자동저장된 내용이 있습니다 (<strong>${data.step1?.proc_name || 'FMEA'}</strong> · ${saved})
+      <button class="btn btn-ghost btn-sm" onclick="restoreFMEA(JSON.parse(localStorage.getItem('${AUTO_KEY}')));document.getElementById('auto-restore-banner').remove();" style="margin-left:8px;">불러오기</button>
+      <button class="btn btn-ghost btn-sm" onclick="localStorage.removeItem('${AUTO_KEY}');this.closest('.restore-banner').remove();" style="margin-left:4px;">무시</button>`;
+    document.querySelector('.page-content').prepend(banner);
+  } catch(e) {}
+}
+
+// 입력할 때마다 3초 후 자동저장
+let autoSaveTimer = null;
+document.addEventListener('input', () => {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(autoSave, 3000);
+});
+
+// 페이지 로드 시 자동저장 확인
+initStep2();
+checkAutoSave();
 </script>
 </body>
 </html>
