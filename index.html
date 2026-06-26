@@ -857,67 +857,111 @@ function getStepHeader(item) {
 }
 
 // Step 4 — RPN
+// 3단계에서 고장유형 목록 수집
+function getFailureModes() {
+  const result = [];
+  document.querySelectorAll('#fmea-step3-container .ws-section').forEach(sec => {
+    const { key, stepName, subName } = getStepHeader(sec);
+    // 기본 행
+    const baseTas = sec.querySelector('.failure-row-base, .ws-row.cols3')?.querySelectorAll('textarea');
+    if (baseTas) {
+      const f = baseTas[0]?.value.trim(), c = baseTas[1]?.value.trim(), e = baseTas[2]?.value.trim();
+      if (f) result.push({ subKey: key, stepName, subName, failure: f, cause: c||'', effect: e||'', rowIdx: 0 });
+    }
+    // 추가 행
+    sec.querySelectorAll('.extra-failure-row').forEach((row, idx) => {
+      const tas = row.querySelectorAll('textarea');
+      const f = tas[0]?.value.trim(), c = tas[1]?.value.trim(), e = tas[2]?.value.trim();
+      if (f) result.push({ subKey: key, stepName, subName, failure: f, cause: c||'', effect: e||'', rowIdx: idx + 1 });
+    });
+  });
+  return result;
+}
+
 function buildStep4() {
   const container = document.getElementById('fmea-step4-container');
-  const items = document.querySelectorAll('#fmea-step3-container .ws-section');
+  const modes = getFailureModes();
+  const makeKey = m => `${m.subKey}__${m.rowIdx}`;
 
-  // 이미 같은 수면 재빌드 안 하되, 이벤트 리스너는 항상 재연결
-  if (container.children.length === items.length && container.children.length > 0) {
-    container.querySelectorAll('.ws-section').forEach(div => {
-      div.querySelectorAll('.rpn-slider').forEach(sl => {
-        // oninput 속성 방식으로 재설정 (가장 확실)
-        sl.oninput = function() { updateRPN4(this); };
-      });
-      // 현재 값으로 즉시 렌더링
-      const firstSl = div.querySelector('.rpn-slider');
-      if (firstSl) updateRPN4(firstSl);
-    });
-    setTimeout(updateRPNSummary, 100);
-    return;
-  }
-  // 기존 값 백업
+  // 기존 값 백업 (fkey 기준)
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
     const sl = sec.querySelectorAll('input[type=range]');
-    saved[sec.dataset.key] = {
+    saved[sec.dataset.fkey || sec.dataset.key] = {
       s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
-      scope: sec.querySelector('select')?.value||'',
-      priority: sec.querySelector('input[type=text]')?.value||''
+      selected: sec.dataset.selected||'0', autoSelected: sec.dataset.autoSelected||'0'
     };
   });
+
   container.innerHTML = '';
-  items.forEach(item => {
-    const { key, stepLabel, stepName, subName } = getStepHeader(item);
+
+  if (modes.length === 0) {
+    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 3단계에서 잠재적 고장유형을 입력하면 자동으로 표시됩니다.</p></div>`;
+    setTimeout(updateRPNSummary, 100);
+    return;
+  }
+
+  // 하부단계별 그룹 헤더 + 고장유형별 RPN 카드
+  let lastSubKey = null;
+  modes.forEach(m => {
+    const fkey = makeKey(m);
+    const sv = saved[fkey] || {};
+
+    // 하부단계 그룹 헤더
+    if (m.subKey !== lastSubKey) {
+      lastSubKey = m.subKey;
+      const header = document.createElement('div');
+      header.style.cssText = 'background:var(--blue);color:#fff;border-radius:var(--radius-sm);padding:8px 14px;margin-top:14px;margin-bottom:4px;display:flex;align-items:center;gap:10px;';
+      header.innerHTML = `<span style="background:rgba(255,255,255,0.2);border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">${m.subKey}</span>
+        <span style="font-size:11px;color:rgba(255,255,255,0.7);">${m.stepName}</span>
+        <span style="font-size:13px;font-weight:700;">${m.subName}</span>`;
+      container.appendChild(header);
+    }
+
     const div = document.createElement('div');
     div.className = 'ws-section';
-    div.dataset.key = key;
+    div.dataset.key = m.subKey;
+    div.dataset.fkey = fkey;
+    div.dataset.failure = m.failure;
+    div.dataset.cause = m.cause;
+    div.dataset.effect = m.effect;
+    div.dataset.selected = sv.selected || '0';
+    div.dataset.autoSelected = sv.autoSelected || '0';
+
     div.innerHTML = `
-      <div class="ws-header">
-        <span class="ws-step">${stepLabel}</span>
+      <div class="ws-header" style="gap:10px;">
+        <span class="ws-step">${m.subKey}</span>
         <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
-          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName}</span>
-          <span style="font-size:14px;font-weight:700;color:#fff;">${subName}</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.65);">잠재적 고장유형</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${m.failure}</span>
         </div>
       </div>
       <div class="ws-body">
+        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:140px;background:var(--gray-50);border-radius:4px;padding:6px 10px;">
+            <div style="font-size:10px;color:var(--gray-400);font-weight:700;margin-bottom:2px;">잠재적 원인</div>
+            <div style="font-size:12px;color:var(--gray-700);">${m.cause||'—'}</div>
+          </div>
+          <div style="flex:1;min-width:140px;background:var(--gray-50);border-radius:4px;padding:6px 10px;">
+            <div style="font-size:10px;color:var(--gray-400);font-weight:700;margin-bottom:2px;">잠재적 영향</div>
+            <div style="font-size:12px;color:var(--gray-700);">${m.effect||'—'}</div>
+          </div>
+        </div>
         <div class="rpn-box">
           <div class="rpn-title">RPN 점수 산정</div>
           <div class="rpn-sliders">
-            <div class="rpn-sl">
-              <label>심각성 (S)</label>
+            <div class="rpn-sl"><label>심각성 (S)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
-            <div class="rpn-sl">
-              <label>발생가능성 (O)</label>
+            <div class="rpn-sl"><label>발생가능성 (O)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
-            <div class="rpn-sl">
-              <label>발견가능성 (D)</label>
+            <div class="rpn-sl"><label>발견가능성 (D)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
           </div>
           <div class="rpn-result">
-            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>) &nbsp;<span style="font-size:10px;color:var(--gray-400);">※ 슬라이더 초기값 5×5×5=125</span></div>
+            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>)</div>
             <div class="rpn-score-area">
               <span class="rpn-lbl">RPN</span>
               <span class="rpn-val mid rpn-num">125</span>
@@ -926,20 +970,21 @@ function buildStep4() {
           </div>
         </div>
       </div>`;
+
     container.appendChild(div);
-    // 슬라이더 oninput 직접 설정
+
     div.querySelectorAll('.rpn-slider').forEach(sl => {
       sl.oninput = function() { updateRPN4(this); };
     });
+
     // 이전 값 복원
-    if (saved[key]) {
+    if (sv.s) {
       const sl = div.querySelectorAll('.rpn-slider');
-      if (sl[0]) { sl[0].value = saved[key].s; sl[1].value = saved[key].o; sl[2].value = saved[key].d; }
-      const sel = div.querySelector('select'); if (sel) sel.value = saved[key].scope;
-      const pri = div.querySelector('input[type=text]'); if (pri) pri.value = saved[key].priority;
+      if (sl[0]) { sl[0].value = sv.s; sl[1].value = sv.o; sl[2].value = sv.d; }
     }
     setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
   });
+
   setTimeout(updateRPNSummary, 100);
 }
 
@@ -978,45 +1023,48 @@ function updateRPNSummary() {
     return;
   }
 
-  // 고장유형별 데이터 수집
+  // 고장유형별 데이터 수집 + S≥8 자동선정
   const rows = items.map(item => {
-    const fkey   = item.dataset.fkey || item.dataset.key;
-    const subKey = item.dataset.key;
+    const fkey    = item.dataset.fkey || item.dataset.key;
+    const subKey  = item.dataset.key;
     const failure = item.dataset.failure || '';
     const sliders = item.querySelectorAll('.rpn-slider');
-    const s = parseInt(sliders[0]?.value || 5);
-    const o = parseInt(sliders[1]?.value || 5);
-    const d = parseInt(sliders[2]?.value || 5);
+    const s = parseInt(sliders[0]?.value||5);
+    const o = parseInt(sliders[1]?.value||5);
+    const d = parseInt(sliders[2]?.value||5);
     const rpn = s * o * d;
-    // S≥8 자동 선정 처리
-    if (s >= 8 && item.dataset.selected !== '1') {
+
+    // S≥8이면 자동선정 고정
+    if (s >= 8) {
       item.dataset.selected = '1';
       item.dataset.autoSelected = '1';
     }
-    const sel = item.dataset.selected === '1';
-    // 하부단계명
-    const stepNameEl = item.querySelector('.ws-header div > span:first-child');
-    const subNameEl  = item.querySelector('.ws-header div > span:last-child');
-    const stepName = stepNameEl?.textContent || '';
-    const subName  = subNameEl?.textContent || subKey;
-    return { fkey, subKey, stepName, subName, failure, s, o, d, rpn, sel, autoSel: s >= 8 };
+    const sel     = item.dataset.selected === '1';
+    const autoSel = item.dataset.autoSelected === '1';
+
+    // 하부단계명 읽기
+    const headerSpans = item.querySelectorAll('.ws-header div span');
+    const stepName = headerSpans[0]?.textContent || '';
+    const subName  = headerSpans[1]?.textContent || subKey;
+
+    return { fkey, subKey, stepName, subName, failure, s, o, d, rpn, sel, autoSel };
   });
 
-  // RPN 순위 계산 (높은 순)
-  const sorted = [...rows].sort((a, b) => b.rpn - a.rpn);
+  // RPN 순위 (높은 순)
+  const sorted = [...rows].sort((a,b) => b.rpn - a.rpn);
   const rankMap = {};
-  sorted.forEach((r, i) => { rankMap[r.fkey] = i + 1; });
+  sorted.forEach((r,i) => { rankMap[r.fkey] = i + 1; });
 
-  // 하부단계별 그룹핑 (표시 순서 유지)
-  const subMap = {};
-  const subOrder = [];
+  // 하부단계별 그룹핑
+  const subMap = {}, subOrder = [];
   rows.forEach(r => {
-    if (!subMap[r.subKey]) { subMap[r.subKey] = { subKey: r.subKey, subName: r.subName, stepName: r.stepName, failures: [] }; subOrder.push(r.subKey); }
+    if (!subMap[r.subKey]) { subMap[r.subKey] = { subKey:r.subKey, subName:r.subName, stepName:r.stepName, failures:[] }; subOrder.push(r.subKey); }
     subMap[r.subKey].failures.push(r);
   });
 
-  const rpnColor = rpn => rpn >= 200 ? '#b03030' : rpn >= 100 ? '#c2410c' : rpn >= 50 ? '#8a5e00' : '#374151';
-  const rpnBg    = rpn => rpn >= 200 ? '#fdf0f0' : rpn >= 100 ? '#fff1ea' : rpn >= 50 ? '#fdf5e0' : '#f5f6f8';
+  const rpnColor = v => v>=200?'#b03030':v>=100?'#c2410c':v>=50?'#8a5e00':'#374151';
+  const rpnBg    = v => v>=200?'#fdf0f0':v>=100?'#fff1ea':v>=50?'#fdf5e0':'#f5f6f8';
+  const rankColor= r => r<=3?'#b03030':r<=7?'#c2410c':r<=15?'#8a5e00':'#374151';
 
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
     <thead><tr style="background:var(--gray-100);">
@@ -1026,18 +1074,25 @@ function updateRPNSummary() {
       <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:32px;">O</th>
       <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:32px;">D</th>
       <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);color:var(--orange);font-weight:800;width:60px;">RPN</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:50px;">순위</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:90px;">선정</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:46px;">순위</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:88px;">선정</th>
     </tr></thead><tbody>`;
 
   subOrder.forEach(subKey => {
     const group = subMap[subKey];
     group.failures.forEach((r, fi) => {
       const rank = rankMap[r.fkey];
-      const rankColor = rank <= 3 ? '#b03030' : rank <= 7 ? '#c2410c' : rank <= 15 ? '#8a5e00' : '#374151';
       const rowBg = r.sel ? 'background:#f0f7ff;' : '';
-      const autoTag = r.autoSel ? `<span style="font-size:9px;background:#fdf0f0;color:#b03030;border:1px solid #f5c6c6;border-radius:3px;padding:0 4px;margin-left:4px;">S≥8 자동</span>` : '';
       const isFirst = fi === 0;
+      const autoTag = r.autoSel
+        ? `<span style="font-size:9px;background:#fdf0f0;color:#b03030;border:1px solid #f5c6c6;border-radius:3px;padding:1px 5px;margin-left:5px;">S≥8 필수</span>`
+        : '';
+      const btnStyle = r.sel
+        ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;'
+        : 'background:#fff;color:var(--gray-600);border:2px solid var(--gray-300);';
+      const btnLabel = r.autoSel ? '✅ 자동선정' : r.sel ? '✅ 선정됨' : '선정하기';
+      const btnDisabled = r.autoSel ? 'disabled title="S≥8은 자동선정 고정"' : `onclick="toggleSelect('${r.fkey}')"`;
+
       html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">`;
       if (isFirst) {
         html += `<td rowspan="${group.failures.length}" style="padding:7px 10px;vertical-align:middle;border-left:3px solid var(--blue);">
@@ -1046,21 +1101,18 @@ function updateRPNSummary() {
           <div style="font-size:10px;color:var(--gray-400);">${group.stepName}</div>
         </td>`;
       }
-      html += `<td style="padding:7px 10px;">${r.failure}${autoTag}</td>
+      html += `
+        <td style="padding:7px 10px;">${r.failure}${autoTag}</td>
         <td style="padding:7px 8px;text-align:center;font-weight:${r.s>=8?'900':'400'};color:${r.s>=8?'#b03030':'var(--gray-700)'};">${r.s}</td>
         <td style="padding:7px 8px;text-align:center;color:var(--gray-700);">${r.o}</td>
         <td style="padding:7px 8px;text-align:center;color:var(--gray-700);">${r.d}</td>
         <td style="padding:7px 8px;text-align:center;">
           <span style="font-size:14px;font-weight:900;color:${rpnColor(r.rpn)};background:${rpnBg(r.rpn)};padding:2px 7px;border-radius:4px;">${r.rpn}</span>
         </td>
+        <td style="padding:7px 8px;text-align:center;font-weight:700;color:${rankColor(rank)};">${rank}위</td>
         <td style="padding:7px 8px;text-align:center;">
-          <span style="font-size:12px;font-weight:700;color:${rankColor};">${rank}위</span>
-        </td>
-        <td style="padding:7px 8px;text-align:center;">
-          <button onclick="toggleFailureSelect('${r.fkey}')"
-            style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;
-              ${r.sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-500);border:2px solid var(--gray-200);'}">
-            ${r.sel ? '✅ 선정' : '선정하기'}
+          <button ${btnDisabled} style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:${r.autoSel?'default':'pointer'};white-space:nowrap;${btnStyle}opacity:${r.autoSel?'0.85':'1'}">
+            ${btnLabel}
           </button>
         </td>`;
       html += '</tr>';
@@ -1070,39 +1122,34 @@ function updateRPNSummary() {
   const selCount = rows.filter(r => r.sel).length;
   html += `</tbody></table>
     <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">
-      💡 선정된 고장유형: <strong style="color:var(--blue);">${selCount}개</strong> — 선정된 고장유형이 5단계 근본원인 규명 대상이 됩니다.
-      &nbsp;|&nbsp; ⚠️ 심각성(S) 8점 이상은 자동 선정됩니다.
+      💡 선정된 고장유형 <strong style="color:var(--blue);">${selCount}개</strong>가 5단계 근본원인 규명 대상이 됩니다. &nbsp;|&nbsp; ⚠️ S≥8은 자동선정 고정
     </p>`;
   table.innerHTML = html;
 }
 
-function toggleFailureSelect(fkey) {
+function toggleSelect(fkey) {
   const item = document.querySelector(`#fmea-step4-container .ws-section[data-fkey="${fkey}"]`);
-  if (!item) return;
-  // S≥8 자동선정된 항목은 해제 불가
-  if (item.dataset.autoSelected === '1') return;
+  if (!item || item.dataset.autoSelected === '1') return;
   item.dataset.selected = item.dataset.selected === '1' ? '0' : '1';
   updateRPNSummary();
 }
 
 function buildStep5() {
   const container = document.getElementById('fmea-step5-container');
-  const allItems = [...document.querySelectorAll('#fmea-step4-container .ws-section')];
+  const allItems  = [...document.querySelectorAll('#fmea-step4-container .ws-section')];
+  const selected  = allItems.filter(i => i.dataset.selected === '1');
+  const items     = selected.length > 0 ? selected : allItems;
 
-  // 선정된 고장유형만 필터 (선정 없으면 전체)
-  const selected = allItems.filter(i => i.dataset.selected === '1');
-  const items = selected.length > 0 ? selected : allItems;
-
-  // 현재 표시 중인 fkey 목록과 비교 → 다를 때만 재빌드
-  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.fkey || s.dataset.key).join(',');
-  const newKeys = items.map(i => i.dataset.fkey || i.dataset.key).join(',');
+  // fkey 목록 비교 → 같으면 재빌드 안 함
+  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.fkey||s.dataset.key).join(',');
+  const newKeys = items.map(i => i.dataset.fkey||i.dataset.key).join(',');
   if (curKeys === newKeys && container.children.length > 0) return;
 
   // 기존 값 백업
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
     const inp = sec.querySelectorAll('input[type=text]');
-    saved[sec.dataset.fkey || sec.dataset.key] = {
+    saved[sec.dataset.fkey||sec.dataset.key] = {
       w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'',
       w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||''
     };
@@ -1119,7 +1166,7 @@ function buildStep5() {
     const banner = document.createElement('div');
     banner.className = 'info-box blue';
     banner.style.marginBottom = '12px';
-    banner.innerHTML = `✅ <strong>${selected.length}개 고장유형</strong>이 선정되었습니다.${autoCount > 0 ? ` (S≥8 자동선정 ${autoCount}개 포함)` : ''} 선정된 고장유형에 대해 5Why 분석을 진행합니다.`;
+    banner.innerHTML = `✅ <strong>${selected.length}개 고장유형</strong> 선정됨${autoCount > 0 ? ` (S≥8 자동선정 ${autoCount}개 포함)` : ''}`;
     container.appendChild(banner);
   }
 
@@ -1127,14 +1174,13 @@ function buildStep5() {
     const fkey    = item.dataset.fkey || item.dataset.key;
     const subKey  = item.dataset.key;
     const failure = item.dataset.failure || '';
-    const cause   = item.dataset.cause || '';
+    const cause   = item.dataset.cause   || '';
     const sliders = item.querySelectorAll('input[type=range]');
-    const s = sliders[0]?.value||'-', o = sliders[1]?.value||'-', d = sliders[2]?.value||'-';
+    const s=sliders[0]?.value||'-', o=sliders[1]?.value||'-', d=sliders[2]?.value||'-';
     const rpn = sliders.length >= 3 ? parseInt(s)*parseInt(o)*parseInt(d) : '-';
-    const stepNameEl = item.querySelector('.ws-header div > span:first-child');
-    const subNameEl  = item.querySelector('.ws-header div > span:last-child');
-    const stepName = stepNameEl?.textContent || '';
-    const subName  = subNameEl?.textContent || subKey;
+    const headerSpans = item.querySelectorAll('.ws-header div span');
+    const stepName = headerSpans[0]?.textContent || '';
+    const subName  = headerSpans[1]?.textContent || subKey;
     const autoSel  = item.dataset.autoSelected === '1';
 
     const div = createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, autoSel);
@@ -1148,7 +1194,7 @@ function buildStep5() {
 
 function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, autoSel) {
   const rpnBadge = rpn ? `<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;">RPN ${rpn}</span>` : '';
-  const autoTag  = autoSel ? `<span style="font-size:10px;background:rgba(255,100,100,0.3);color:#fff;border-radius:3px;padding:1px 6px;margin-left:4px;">S≥8 자동선정</span>` : '';
+  const autoTag  = autoSel ? `<span style="font-size:10px;background:rgba(255,100,100,0.3);color:#fff;border-radius:3px;padding:1px 6px;margin-left:4px;">S≥8 필수</span>` : '';
   const div = document.createElement('div');
   div.className = 'ws-section';
   div.dataset.fkey = fkey;
@@ -1164,7 +1210,7 @@ function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, aut
         </div>
         ${rpnBadge}${autoTag}
       </div>
-      ${cause ? `<div style="font-size:11px;color:rgba(255,255,255,0.75);padding-left:42px;">잠재적 원인: ${cause}</div>` : ''}
+      ${cause ? `<div style="font-size:11px;color:rgba(255,255,255,0.75);padding-left:42px;">원인: ${cause}</div>` : ''}
     </div>
     <div class="ws-body">
       <div class="why-box">
