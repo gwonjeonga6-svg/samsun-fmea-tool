@@ -2184,14 +2184,21 @@ function downloadWord() {
   const html = `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head><meta charset='utf-8'>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
 <style>
-  @page WordSection1 { size: 29.7cm 21cm; mso-page-orientation: landscape; margin: 1.2cm 1.2cm 1.2cm 1.2cm; }
-  div.WordSection1 { page: WordSection1; }
+  @page Section1 {
+    size: 841.95pt 595.35pt;
+    mso-page-orientation: landscape;
+    margin: 42.55pt 42.55pt 42.55pt 42.55pt;
+    mso-header-margin: 20pt;
+    mso-footer-margin: 20pt;
+  }
+  div.Section1 { page: Section1; }
   body { font-family: '맑은 고딕', Arial, sans-serif; font-size: 10pt; margin: 0; line-height: 1.4; }
   h1 { font-size: 15pt; color: #0f4080; border-bottom: 2px solid #0f4080; padding-bottom: 6px; margin-bottom: 5px; }
   .doc-meta { font-size: 9pt; color: #555; margin-bottom: 14px; }
   h2 { font-size: 11pt; color: #1a5fa8; margin-top: 16px; margin-bottom: 6px; background: #eaf1fb; padding: 4px 8px; border-left: 4px solid #1a5fa8; }
-  table { border-collapse: collapse; width: 100%; margin-bottom: 10px; font-size: 10pt; table-layout: fixed; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 10px; font-size: 9.5pt; table-layout: fixed; }
   th { background: #1a5fa8; color: white; padding: 5px 6px; text-align: left; font-weight: bold; word-break: keep-all; font-size: 9.5pt; }
   td { border: 1px solid #c4cad5; padding: 4px 6px; vertical-align: top; word-break: break-all; font-size: 9.5pt; }
   tr:nth-child(even) td { background: #f5f6f8; }
@@ -2202,7 +2209,7 @@ function downloadWord() {
   .footer { margin-top: 20px; font-size: 8.5pt; color: #888; border-top: 1px solid #dde1e9; padding-top: 6px; text-align: right; }
 </style>
 </head>
-<body><div class="WordSection1">
+<body><div class="Section1">
 <h1>FMEA 분석 보고서</h1>
 <div class="doc-meta">📋 ${procName} &nbsp;|&nbsp; ${dept} &nbsp;|&nbsp; 분석일: ${date} &nbsp;|&nbsp; 출력일: ${printDate}</div>
 
