@@ -241,6 +241,8 @@
 
   /* Print styles */
   @media print {
+    @page { size: A4 landscape; margin: 12mm 10mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .sidebar, .topbar, .btn-row, .export-bar, .save-btns, button,
     .proc-del, .proc-sub-del, .restore-banner, .progress-pill { display:none !important; }
     .main { margin-left:0 !important; }
@@ -277,6 +279,13 @@
     body.print-mode #step3-print-table td { padding:4px 7px; border:1px solid #dde1e9; vertical-align:top; line-height:1.4; }
     body.print-mode #step3-print-table tr:nth-child(even) td { background:#f5f7fb; }
     body.print-mode #step3-print-table .sub-header td { background:#eaf1fb !important; color:#1a5fa8; font-weight:700; font-size:9pt; }
+    /* 2단계 인쇄용 표 */
+    body.print-mode #process-steps-list { display:none !important; }
+    body.print-mode #step2-print-table { display:block !important; }
+    body.print-mode #step2-print-table table { width:100%; border-collapse:collapse; font-size:9pt; }
+    body.print-mode #step2-print-table th { background:#1a5fa8; color:#fff; padding:5px 8px; text-align:left; font-weight:700; border:1px solid #1a5fa8; }
+    body.print-mode #step2-print-table td { padding:5px 8px; border:1px solid #dde1e9; vertical-align:middle; line-height:1.4; }
+    body.print-mode #step2-print-table .step-cell { background:#eaf1fb; font-weight:700; color:#1a5fa8; text-align:center; }
     /* 7단계: 슬라이더 숨기고 수식+값만 표시 */
     body.print-mode .rpn-sliders,
     body.print-mode .paper-sliders { display:none !important; }
@@ -427,6 +436,8 @@
             <div class="card-desc">선정된 고위험 프로세스를 단계와 하부단계로 나눠 기술하세요. 하부단계는 업무 중심으로 상세히 기술하면 고장유형 규명에 효과적입니다.</div>
           </div>
           <div id="process-steps-list"></div>
+          <!-- 인쇄용 표 (화면에서 숨김) -->
+          <div id="step2-print-table" style="display:none;"></div>
           <button class="btn btn-ghost btn-sm" onclick="addProcessStep()" style="margin-top:8px;">+ 단계 추가</button>
         </div>
         <div class="btn-row">
@@ -2260,6 +2271,49 @@ function copyToSheet() {
   });
 }
 
+// 2단계 인쇄용 표 생성
+function buildStep2PrintTable() {
+  const wrap = document.getElementById('step2-print-table');
+  if (!wrap) return;
+
+  const steps = [];
+  document.querySelectorAll('#process-steps-list .proc-item').forEach((item, si) => {
+    const stepName = item.querySelector('input')?.value?.trim() || `${si+1}단계`;
+    const subs = [];
+    item.querySelectorAll('.proc-sub-item').forEach((sub, idx) => {
+      const subName = sub.querySelector('input')?.value?.trim() || '';
+      if (subName) subs.push({ num: `${si+1}-${idx+1}`, name: subName });
+    });
+    if (subs.length > 0) steps.push({ stepNum: si+1, stepName, subs });
+  });
+
+  if (steps.length === 0) { wrap.innerHTML = ''; return; }
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:12%;">단계</th>
+      <th style="width:18%;">단계명</th>
+      <th style="width:10%;">하부단계</th>
+      <th style="width:60%;">하부단계 내용</th>
+    </tr></thead><tbody>`;
+
+  steps.forEach(step => {
+    step.subs.forEach((sub, si) => {
+      const isFirst = si === 0;
+      html += `<tr>`;
+      if (isFirst) {
+        html += `<td rowspan="${step.subs.length}" class="step-cell">${step.stepNum}단계</td>
+                 <td rowspan="${step.subs.length}" class="step-cell">${step.stepName}</td>`;
+      }
+      html += `<td style="text-align:center;font-weight:700;color:#1a5fa8;">${sub.num}</td>
+               <td>${sub.name}</td></tr>`;
+    });
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 // 3단계 인쇄용 표 생성
 function buildStep3PrintTable() {
   const wrap = document.getElementById('step3-print-table');
@@ -2320,6 +2374,7 @@ function buildStep3PrintTable() {
 
 // 전체 PDF 출력
 function printReport() {
+  buildStep2PrintTable();
   buildStep3PrintTable();
   document.body.classList.add('print-mode');
   for (let i = 1; i <= 8; i++) {
