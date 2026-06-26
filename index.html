@@ -2185,22 +2185,24 @@ function downloadWord() {
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head><meta charset='utf-8'>
 <style>
-  body { font-family: '맑은 고딕', Arial, sans-serif; font-size: 11pt; margin: 2.5cm 2cm; line-height: 1.5; }
-  h1 { font-size: 17pt; color: #0f4080; border-bottom: 2px solid #0f4080; padding-bottom: 8px; margin-bottom: 6px; }
-  .doc-meta { font-size: 10pt; color: #555; margin-bottom: 20px; }
-  h2 { font-size: 12pt; color: #1a5fa8; margin-top: 22px; margin-bottom: 8px; background: #eaf1fb; padding: 5px 10px; border-left: 4px solid #1a5fa8; }
-  table { border-collapse: collapse; width: 100%; margin-bottom: 14px; font-size: 10pt; table-layout: fixed; }
-  th { background: #1a5fa8; color: white; padding: 6px 7px; text-align: left; font-weight: bold; word-break: keep-all; }
-  td { border: 1px solid #c4cad5; padding: 5px 7px; vertical-align: top; word-break: break-all; }
+  @page WordSection1 { size: 29.7cm 21cm; mso-page-orientation: landscape; margin: 1.2cm 1.2cm 1.2cm 1.2cm; }
+  div.WordSection1 { page: WordSection1; }
+  body { font-family: '맑은 고딕', Arial, sans-serif; font-size: 10pt; margin: 0; line-height: 1.4; }
+  h1 { font-size: 15pt; color: #0f4080; border-bottom: 2px solid #0f4080; padding-bottom: 6px; margin-bottom: 5px; }
+  .doc-meta { font-size: 9pt; color: #555; margin-bottom: 14px; }
+  h2 { font-size: 11pt; color: #1a5fa8; margin-top: 16px; margin-bottom: 6px; background: #eaf1fb; padding: 4px 8px; border-left: 4px solid #1a5fa8; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 10px; font-size: 10pt; table-layout: fixed; }
+  th { background: #1a5fa8; color: white; padding: 5px 6px; text-align: left; font-weight: bold; word-break: keep-all; font-size: 9.5pt; }
+  td { border: 1px solid #c4cad5; padding: 4px 6px; vertical-align: top; word-break: break-all; font-size: 9.5pt; }
   tr:nth-child(even) td { background: #f5f6f8; }
   .info-table { table-layout: fixed; }
-  .info-table td:first-child { font-weight: bold; color: #374151; width: 110pt; background: #eceef2; }
+  .info-table td:first-child { font-weight: bold; color: #374151; width: 90pt; background: #eceef2; }
   .rpn-high { color: #b03030; font-weight: bold; }
   .rpn-mid { color: #8a5e00; font-weight: bold; }
-  .footer { margin-top: 28px; font-size: 9pt; color: #888; border-top: 1px solid #dde1e9; padding-top: 8px; text-align: right; }
+  .footer { margin-top: 20px; font-size: 8.5pt; color: #888; border-top: 1px solid #dde1e9; padding-top: 6px; text-align: right; }
 </style>
 </head>
-<body>
+<body><div class="WordSection1">
 <h1>FMEA 분석 보고서</h1>
 <div class="doc-meta">📋 ${procName} &nbsp;|&nbsp; ${dept} &nbsp;|&nbsp; 분석일: ${date} &nbsp;|&nbsp; 출력일: ${printDate}</div>
 
@@ -2263,7 +2265,7 @@ function downloadWord() {
 </table>
 
 <div class="footer">작성: ${printDate} &nbsp;|&nbsp; 대한환자안전질향상간호사회 FMEA Toolkit 기반</div>
-</body></html>`;
+</div></body></html>`;
 
   const blob = new Blob(['\ufeff' + html], { type: 'application/msword;charset=utf-8' });
   const url = URL.createObjectURL(blob);
