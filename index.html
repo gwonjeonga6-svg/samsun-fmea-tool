@@ -306,8 +306,39 @@
     body.print-mode .paper-sliders { display:none !important; }
     body.print-mode .rpn-result,
     body.print-mode .paper-result { border:1px solid #ccc !important; padding:6px 10px !important; border-radius:4px; }
-    body.print-mode .step-print-title + .card,
-    body.print-mode .step-print-title + div { break-before:avoid; }
+    /* 인쇄 시 빈 카드(설명+내용 없는 카드) 숨김 */
+    body.print-mode #flowchart-card { display:none !important; }
+    body.print-mode #step4 > .card { display:none !important; }
+    body.print-mode #step7 > .card { display:none !important; }
+    body.print-mode #step8 > .card { display:none !important; }
+    body.print-mode #step1 > .card { display:none !important; }
+    body.print-mode #step3 > .card { display:none !important; }
+    body.print-mode #step6 > .card:not(#flowchart-card) { display:none !important; }
+    /* 공통 인쇄용 표 스타일 */
+    body.print-mode .step-print-table { display:block !important; }
+    body.print-mode #step1-print-table,
+    body.print-mode #step6-print-table,
+    body.print-mode #step7-print-table,
+    body.print-mode #step8-print-table { display:block !important; }
+    body.print-mode #step1-print-table table,
+    body.print-mode #step6-print-table table,
+    body.print-mode #step7-print-table table,
+    body.print-mode #step8-print-table table { width:100%; border-collapse:collapse; font-size:9pt; }
+    body.print-mode #step1-print-table th,
+    body.print-mode #step6-print-table th,
+    body.print-mode #step7-print-table th,
+    body.print-mode #step8-print-table th { background:#1a5fa8; color:#fff; padding:5px 7px; text-align:left; font-weight:700; border:1px solid #1a5fa8; }
+    body.print-mode #step1-print-table td,
+    body.print-mode #step6-print-table td,
+    body.print-mode #step7-print-table td,
+    body.print-mode #step8-print-table td { padding:4px 7px; border:1px solid #dde1e9; vertical-align:top; line-height:1.5; }
+    /* 6단계 카드 UI 숨기고 표 표시 */
+    body.print-mode #fmea-step6-container { display:none !important; }
+    /* 7단계 카드 UI 숨기고 표 표시 */
+    body.print-mode #fmea-step7-container { display:none !important; }
+    body.print-mode #ci-compare-table { display:none !important; }
+    /* 8단계 카드 UI 숨기고 표 표시 */
+    body.print-mode #fmea-step8-container { display:none !important; }
     /* 각 단계 설명 카드(card-header) 인쇄 시 숨김 */
     body.print-mode .card-header { display:none !important; }
     /* 단계별 새 페이지 시작 */
@@ -384,6 +415,8 @@
       <!-- STEP 1 -->
       <div id="step1">
         <div class="step-print-title">1단계 — 고위험 프로세스 선정 · 팀 구성</div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step1-print-table" style="display:none;"></div>
         <div class="card">
           <div class="card-header">
             <div class="card-eyebrow">1단계 — FMEA 주제선정</div>
@@ -586,6 +619,8 @@
           </div>
         </div>
         <div id="fmea-step6-container"></div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step6-print-table" style="display:none;"></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goStep(5)">← 이전</button>
           <button class="btn btn-primary" onclick="goStep(7)">다음 단계 →</button>
@@ -606,6 +641,8 @@
           <div id="ci-compare-table"></div>
         </div>
         <div id="fmea-step7-container"></div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step7-print-table" style="display:none;"></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goStep(6)">← 이전</button>
           <button class="btn btn-primary" onclick="initStep8()">다음 단계 →</button>
@@ -646,6 +683,8 @@
           </div>
         </div>
         <div id="fmea-step8-container"></div>
+        <!-- 인쇄용 표 (화면에서 숨김) -->
+        <div id="step8-print-table" style="display:none;"></div>
         <button class="btn btn-ghost btn-sm" onclick="addMonitor()" style="margin-bottom:16px;">+ 이행관리 항목 추가</button>
         <div class="export-bar" style="margin-top:8px;">
           <span class="bar-title">📊 완료 — 데이터 내보내기</span>
@@ -2295,6 +2334,194 @@ function copyToSheet() {
   });
 }
 
+// 1단계 인쇄용 표 생성
+function buildStep1PrintTable() {
+  const wrap = document.getElementById('step1-print-table');
+  if (!wrap) return;
+  const procName   = document.getElementById('proc_name')?.value || '';
+  const date       = document.getElementById('analysis_date')?.value || '';
+  const dept       = document.getElementById('department')?.value || '';
+  const scope      = document.getElementById('proc_scope')?.value || '';
+  const reasons    = [...document.querySelectorAll('input[name=reason]:checked')].map(c=>c.value).join(', ');
+  const reasonOther= document.getElementById('reason_other')?.value || '';
+
+  // 팀 구성
+  let teamRows = '';
+  document.querySelectorAll('#team-list .member-row').forEach(row => {
+    const role = row.querySelector('select')?.value || '';
+    const inputs = row.querySelectorAll('input');
+    const deptVal = inputs[0]?.value || '';
+    const name    = inputs[1]?.value || '';
+    if (deptVal || name) teamRows += `<tr><td style="text-align:center;font-weight:700;color:#1a5fa8;background:#eaf1fb;">${role}</td><td>${deptVal}</td><td>${name}</td></tr>`;
+  });
+
+  // 체크리스트
+  let checkRows = '';
+  document.querySelectorAll('#checklist label').forEach(label => {
+    const checked = label.querySelector('input')?.checked;
+    const text = label.textContent.trim();
+    checkRows += `<tr><td style="text-align:center;">${checked ? '✅' : '☐'}</td><td>${text}</td></tr>`;
+  });
+
+  wrap.innerHTML = `
+    <table style="margin-bottom:10px;">
+      <thead><tr><th colspan="2">FMEA 주제 및 분석 정보</th></tr></thead>
+      <tbody>
+        <tr><td style="width:20%;background:#eaf1fb;font-weight:700;">FMEA 주제</td><td>${procName}</td></tr>
+        <tr><td style="background:#eaf1fb;font-weight:700;">분석일자</td><td>${date}</td></tr>
+        <tr><td style="background:#eaf1fb;font-weight:700;">부서/부문</td><td>${dept}</td></tr>
+        <tr><td style="background:#eaf1fb;font-weight:700;">분석 범위 및 목적</td><td>${scope}</td></tr>
+        <tr><td style="background:#eaf1fb;font-weight:700;">선정 근거</td><td>${reasons}${reasonOther ? ' / '+reasonOther : ''}</td></tr>
+      </tbody>
+    </table>
+    <table style="margin-bottom:10px;">
+      <thead><tr><th>역할</th><th>소속부서/직위</th><th>이름</th></tr></thead>
+      <tbody>${teamRows}</tbody>
+    </table>
+    <table>
+      <thead><tr><th style="width:8%;">확인</th><th>팀 구성 사전 점검</th></tr></thead>
+      <tbody>${checkRows}</tbody>
+    </table>`;
+}
+
+// 6단계 인쇄용 표 생성
+function buildStep6PrintTable() {
+  const wrap = document.getElementById('step6-print-table');
+  if (!wrap) return;
+  const items = [...document.querySelectorAll('#fmea-step6-container .ws-section')];
+  if (items.length === 0) { wrap.innerHTML = ''; return; }
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:8%;">하부단계</th>
+      <th style="width:18%;">고장유형</th>
+      <th style="width:28%;">프로세스 재설계 내용</th>
+      <th style="width:14%;">책임자</th>
+      <th style="width:12%;">완료예정일</th>
+      <th style="width:20%;">평가지표</th>
+    </tr></thead><tbody>`;
+
+  items.forEach(item => {
+    const subKey   = item.querySelector('.ws-step')?.textContent || '';
+    const failure  = item.dataset.failure || item.querySelector('.ws-header div span:last-child')?.textContent || '';
+    const redesign = item.querySelector('.redesign-box textarea')?.value || '';
+    const inputs   = item.querySelectorAll('.redesign-box input');
+    const resp     = inputs[0]?.value || '';
+    const deadline = inputs[1]?.value || '';
+    const kpi      = inputs[2]?.value || '';
+    const rootCause= item.querySelector('[style*="purple"]')?.textContent?.replace('근본원인: ','') || '';
+    html += `<tr>
+      <td style="text-align:center;font-weight:700;color:#1a5fa8;background:#eaf1fb;">${subKey}</td>
+      <td style="background:#eaf1fb;font-size:8.5pt;">${failure}${rootCause?`<br><span style="color:#6d28d9;font-size:8pt;">근본원인: ${rootCause}</span>`:''}
+      </td>
+      <td style="font-size:8.5pt;">${redesign}</td>
+      <td style="text-align:center;font-size:8.5pt;">${resp}</td>
+      <td style="text-align:center;font-size:8.5pt;">${deadline}</td>
+      <td style="font-size:8.5pt;">${kpi}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// 7단계 인쇄용 표 생성
+function buildStep7PrintTable() {
+  const wrap = document.getElementById('step7-print-table');
+  if (!wrap) return;
+  const items = [...document.querySelectorAll('#fmea-step7-container .ws-section')];
+  if (items.length === 0) { wrap.innerHTML = ''; return; }
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:8%;">하부단계</th>
+      <th style="width:20%;">고장유형</th>
+      <th style="width:8%;text-align:center;">개선전 S</th>
+      <th style="width:8%;text-align:center;">개선전 O</th>
+      <th style="width:8%;text-align:center;">개선전 D</th>
+      <th style="width:9%;text-align:center;">개선전 RPN</th>
+      <th style="width:8%;text-align:center;">개선후 S</th>
+      <th style="width:8%;text-align:center;">개선후 O</th>
+      <th style="width:8%;text-align:center;">개선후 D</th>
+      <th style="width:9%;text-align:center;">개선후 RPN</th>
+      <th style="width:6%;text-align:center;">개선율</th>
+    </tr></thead><tbody>`;
+
+  items.forEach(item => {
+    const subKey = item.querySelector('.ws-step')?.textContent || '';
+    const headerSpans = item.querySelectorAll('.ws-header div span');
+    const failure = headerSpans[1]?.textContent?.replace('잠재적 고장유형 · ','') || '';
+    const beforeRPN = parseInt(item.querySelector('.before-rpn-val')?.textContent || '0');
+    const pSliders  = item.querySelectorAll('.paper-slider');
+    const as = parseInt(pSliders[0]?.value||0), ao = parseInt(pSliders[1]?.value||0), ad = parseInt(pSliders[2]?.value||0);
+    const afterRPN  = as * ao * ad;
+    const rate = beforeRPN > 0 ? Math.round((1 - afterRPN/beforeRPN)*100) : 0;
+    const rateColor = rate >= 0 ? '#0e6b4f' : '#b03030';
+    // 개선전 S,O,D는 before-rpn-val 옆 텍스트에서 파싱
+    const beforeText = item.querySelector('.before-rpn-val')?.parentElement?.querySelector('span')?.textContent || '';
+    const bMatch = beforeText.match(/S:(\d+).*O:(\d+).*D:(\d+)/);
+    const bs = bMatch?.[1]||'', bo = bMatch?.[2]||'', bd = bMatch?.[3]||'';
+    html += `<tr>
+      <td style="text-align:center;font-weight:700;color:#1a5fa8;background:#eaf1fb;">${subKey}</td>
+      <td style="background:#eaf1fb;font-size:8.5pt;">${failure}</td>
+      <td style="text-align:center;">${bs}</td><td style="text-align:center;">${bo}</td><td style="text-align:center;">${bd}</td>
+      <td style="text-align:center;font-weight:700;color:#b03030;">${beforeRPN}</td>
+      <td style="text-align:center;">${as}</td><td style="text-align:center;">${ao}</td><td style="text-align:center;">${ad}</td>
+      <td style="text-align:center;font-weight:700;color:#0e6b4f;">${afterRPN}</td>
+      <td style="text-align:center;font-weight:700;color:${rateColor};">${rate>0?'▼'+rate+'%':rate<0?'▲'+Math.abs(rate)+'%':'-'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// 8단계 인쇄용 표 생성
+function buildStep8PrintTable() {
+  const wrap = document.getElementById('step8-print-table');
+  if (!wrap) return;
+  const rows = [...document.querySelectorAll('#fmea-step8-container .monitor-row')];
+  if (rows.length === 0) { wrap.innerHTML = ''; return; }
+
+  const months = getMonthLabels();
+  const monthHeaders = months.map(m=>`<th style="text-align:center;min-width:40px;">${m}</th>`).join('');
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:14%;">고장유형</th>
+      <th style="width:22%;">프로세스 재설계 내용</th>
+      <th style="width:10%;">책임자</th>
+      <th style="width:10%;">완료예정일</th>
+      <th style="width:12%;">평가지표</th>
+      <th style="width:10%;">최종결과</th>
+      ${monthHeaders}
+    </tr></thead><tbody>`;
+
+  rows.forEach(row => {
+    const headerDiv  = row.querySelector('div:first-child');
+    const failureEl  = headerDiv?.querySelector('span:nth-child(3)');
+    const failure    = failureEl?.textContent?.replace('· ','') || '';
+    const redesign   = row.querySelector('textarea')?.value || '';
+    const inputs     = row.querySelectorAll('.grid4 input');
+    const resp       = inputs[0]?.value || '';
+    const deadline   = inputs[1]?.value || '';
+    const kpi        = inputs[2]?.value || '';
+    const result     = inputs[3]?.value || '';
+    const monthVals  = [...row.querySelectorAll('.month-item input')].map(i=>i.value||'');
+    const monthCells = monthVals.map(v=>`<td style="text-align:center;font-size:8pt;">${v}</td>`).join('');
+
+    html += `<tr>
+      <td style="font-size:8.5pt;color:#1a5fa8;font-weight:600;background:#eaf1fb;">${failure}</td>
+      <td style="font-size:8.5pt;">${redesign}</td>
+      <td style="text-align:center;font-size:8.5pt;">${resp}</td>
+      <td style="text-align:center;font-size:8.5pt;">${deadline}</td>
+      <td style="font-size:8.5pt;">${kpi}</td>
+      <td style="font-size:8.5pt;">${result}</td>
+      ${monthCells}
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 // 5단계 인쇄용 표 생성
 function buildStep5PrintTable() {
   const wrap = document.getElementById('step5-print-table');
@@ -2436,17 +2663,19 @@ function buildStep2PrintTable() {
     const subs = [];
     item.querySelectorAll('.proc-sub-item').forEach((sub, idx) => {
       const subName = sub.querySelector('input')?.value?.trim() || '';
-      if (subName) subs.push({ num: `${si+1}-${idx+1}`, name: subName });
+      // 빈 값도 포함 (번호 연속성 유지), 단 모두 비어있으면 제외
+      subs.push({ num: `${si+1}-${idx+1}`, name: subName });
     });
-    if (subs.length > 0) steps.push({ stepNum: si+1, stepName, subs });
+    const nonEmpty = subs.filter(s => s.name);
+    if (nonEmpty.length > 0) steps.push({ stepNum: si+1, stepName, subs: nonEmpty });
   });
 
   if (steps.length === 0) { wrap.innerHTML = ''; return; }
 
   let html = `<table>
     <thead><tr>
-      <th style="width:12%;">단계</th>
-      <th style="width:18%;">단계명</th>
+      <th style="width:10%;">단계</th>
+      <th style="width:20%;">단계명</th>
       <th style="width:10%;">하부단계</th>
       <th style="width:60%;">하부단계 내용</th>
     </tr></thead><tbody>`;
@@ -2456,8 +2685,8 @@ function buildStep2PrintTable() {
       const isFirst = si === 0;
       html += `<tr>`;
       if (isFirst) {
-        html += `<td rowspan="${step.subs.length}" class="step-cell">${step.stepNum}단계</td>
-                 <td rowspan="${step.subs.length}" class="step-cell">${step.stepName}</td>`;
+        html += `<td rowspan="${step.subs.length}" class="step-cell" style="text-align:center;vertical-align:middle;">${step.stepNum}단계</td>
+                 <td rowspan="${step.subs.length}" class="step-cell" style="vertical-align:middle;">${step.stepName}</td>`;
       }
       html += `<td style="text-align:center;font-weight:700;color:#1a5fa8;">${sub.num}</td>
                <td>${sub.name}</td></tr>`;
@@ -2528,10 +2757,14 @@ function buildStep3PrintTable() {
 
 // 전체 PDF 출력
 function printReport() {
+  buildStep1PrintTable();
   buildStep2PrintTable();
   buildStep3PrintTable();
   buildStep4PrintTable();
   buildStep5PrintTable();
+  buildStep6PrintTable();
+  buildStep7PrintTable();
+  buildStep8PrintTable();
   document.body.classList.add('print-mode');
   for (let i = 1; i <= 8; i++) {
     const el = document.getElementById('step' + i);
