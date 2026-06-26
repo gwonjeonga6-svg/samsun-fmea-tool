@@ -293,6 +293,11 @@
     body.print-mode .paper-result { border:1px solid #ccc !important; padding:6px 10px !important; border-radius:4px; }
     body.print-mode .step-print-title + .card,
     body.print-mode .step-print-title + div { break-before:avoid; }
+    /* 각 단계 설명 카드(card-header) 인쇄 시 숨김 */
+    body.print-mode .card-header { display:none !important; }
+    /* 단계별 새 페이지 시작 */
+    body.print-mode .step-divider { break-before:page !important; }
+    body.print-mode #step1 .step-divider { break-before:avoid !important; }
   }
   .step-divider, .step-print-title { display:none; }
 </style>
