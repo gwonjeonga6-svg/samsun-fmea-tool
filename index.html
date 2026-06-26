@@ -1836,12 +1836,17 @@ function saveFMEA() {
   }));
   data.step4 = [...document.querySelectorAll('#fmea-step4-container .ws-section')].map(item=>{
     const sl = item.querySelectorAll('input[type=range]');
-    return { key: item.dataset.key, s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
-      scope: item.querySelector('select')?.value||'', priority: item.querySelector('input[type=text]')?.value||'' };
+    return { key: item.dataset.key, fkey: item.dataset.fkey||item.dataset.key,
+      failure: item.dataset.failure||'', cause: item.dataset.cause||'', effect: item.dataset.effect||'',
+      selected: item.dataset.selected||'0', autoSelected: item.dataset.autoSelected||'0',
+      s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5 };
   });
   data.step5 = [...document.querySelectorAll('#fmea-step5-container .ws-section')].map(item=>{
     const inp = item.querySelectorAll('input[type=text]');
-    return { key: item.dataset.key, w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', root:inp[4]?.value||'' };
+    return { key: item.dataset.key, fkey: item.dataset.fkey||item.dataset.key,
+      failure: item.dataset.failure||'',
+      w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'',
+      w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
   });
   data.step6 = [...document.querySelectorAll('#fmea-step6-container .ws-section')].map(item=>{
     const inp = item.querySelectorAll('.redesign-box input[type=text]');
@@ -2342,32 +2347,38 @@ function goStep(n) {
   if (n === 4 && window._savedStep4) {
     setTimeout(() => {
       window._savedStep4.forEach(sd => {
-        const item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${sd.key}"]`);
+        // 새 형식: fkey로 찾기
+        const fkey = sd.fkey || sd.key;
+        let item = document.querySelector(`#fmea-step4-container .ws-section[data-fkey="${fkey}"]`);
+        // 이전 형식 호환: key로 찾기
+        if (!item) item = document.querySelector(`#fmea-step4-container .ws-section[data-key="${sd.key}"]`);
         if (!item) return;
         const sl = item.querySelectorAll('input[type=range]');
-        if (sl[0]) { sl[0].value = sd.s; sl[1].value = sd.o; sl[2].value = sd.d; updateRPN4(sl[0]); }
-        const sel = item.querySelector('select');
-        if (sel) sel.value = sd.scope||'';
-        const pri = item.querySelector('input[type=text]');
-        if (pri) pri.value = sd.priority||'';
+        if (sl[0]) { sl[0].value = sd.s||5; sl[1].value = sd.o||5; sl[2].value = sd.d||5; }
+        if (sd.selected) item.dataset.selected = sd.selected;
+        if (sd.autoSelected) item.dataset.autoSelected = sd.autoSelected;
+        if (sl[0]) updateRPN4(sl[0]);
       });
       window._savedStep4 = null;
-    }, 50);
+    }, 200);
   }
   if (n === 5 && window._savedStep5) {
     setTimeout(() => {
       window._savedStep5.forEach(sd => {
-        const item = document.querySelector(`#fmea-step5-container .ws-section[data-key="${sd.key}"]`);
+        const fkey = sd.fkey || sd.key;
+        let item = document.querySelector(`#fmea-step5-container .ws-section[data-fkey="${fkey}"]`);
+        if (!item) item = document.querySelector(`#fmea-step5-container .ws-section[data-key="${sd.key}"]`);
         if (!item) return;
         const inp = item.querySelectorAll('input[type=text]');
         if (inp[0]) inp[0].value = sd.w1||'';
         if (inp[1]) inp[1].value = sd.w2||'';
         if (inp[2]) inp[2].value = sd.w3||'';
         if (inp[3]) inp[3].value = sd.w4||'';
-        if (inp[4]) inp[4].value = sd.root||'';
+        if (inp[4]) inp[4].value = sd.w5||sd.root||'';
+        if (inp[5]) inp[5].value = sd.root||'';
       });
       window._savedStep5 = null;
-    }, 50);
+    }, 200);
   }
   if (n === 6 && window._savedStep6) {
     setTimeout(() => {
@@ -2442,12 +2453,17 @@ function autoSave() {
     }));
     data.step4 = [...document.querySelectorAll('#fmea-step4-container .ws-section')].map(item=>{
       const sl = item.querySelectorAll('input[type=range]');
-      return { key:item.dataset.key, s:sl[0]?.value||5, o:sl[1]?.value||5, d:sl[2]?.value||5,
-        scope:item.querySelector('select')?.value||'', priority:item.querySelector('input[type=text]')?.value||'' };
+      return { key:item.dataset.key, fkey:item.dataset.fkey||item.dataset.key,
+        failure:item.dataset.failure||'', cause:item.dataset.cause||'', effect:item.dataset.effect||'',
+        selected:item.dataset.selected||'0', autoSelected:item.dataset.autoSelected||'0',
+        s:sl[0]?.value||5, o:sl[1]?.value||5, d:sl[2]?.value||5 };
     });
     data.step5 = [...document.querySelectorAll('#fmea-step5-container .ws-section')].map(item=>{
       const inp = item.querySelectorAll('input[type=text]');
-      return { key:item.dataset.key, w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
+      return { key:item.dataset.key, fkey:item.dataset.fkey||item.dataset.key,
+        failure:item.dataset.failure||'',
+        w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'',
+        w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
     });
     data.step6 = [...document.querySelectorAll('#fmea-step6-container .ws-section')].map(item=>{
       const inp = item.querySelectorAll('.redesign-box input');
