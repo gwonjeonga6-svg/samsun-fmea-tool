@@ -736,27 +736,28 @@ function initStep3() {
   const subs = getSubSteps();
 
   if (subs.length > 0) {
-    const existing = container.querySelectorAll('.ws-section');
-    if (existing.length === 0) {
-      subs.forEach(sub => { container.appendChild(buildStep3Item(sub)); });
-    } else {
-      subs.forEach((sub, i) => {
-        const sec = existing[i];
-        if (!sec) { container.appendChild(buildStep3Item(sub)); return; }
-        // key 업데이트
-        sec.dataset.key = sub.key;
-        const stepSpan = sec.querySelector('.ws-step');
-        if (stepSpan) stepSpan.textContent = sub.key;
-        // 단계명 span 업데이트
-        const stepNameSpan = sec.querySelector('.ws-header > div > span:first-child');
-        if (stepNameSpan) stepNameSpan.textContent = sub.stepName;
-        // 하부단계명 input 업데이트 (기본값이면 교체)
-        const subInput = sec.querySelector('.sub-name-input');
-        if (subInput && (!subInput.value || subInput.value.startsWith('하부단계'))) {
-          subInput.value = sub.subName;
-        }
-      });
+    const existing = [...container.querySelectorAll('.ws-section')];
+
+    // ① 2단계 하부단계 수만큼 3단계 항목 맞추기
+    // 부족하면 추가, 초과하면 뒤에서 삭제
+    while (container.querySelectorAll('.ws-section').length < subs.length) {
+      container.appendChild(buildStep3Item(subs[container.querySelectorAll('.ws-section').length]));
     }
+    while (container.querySelectorAll('.ws-section').length > subs.length) {
+      container.lastElementChild.remove();
+    }
+
+    // ② 항목별로 key·단계명·하부단계명 항상 2단계 내용으로 동기화
+    container.querySelectorAll('.ws-section').forEach((sec, i) => {
+      const sub = subs[i];
+      sec.dataset.key = sub.key;
+      const stepSpan = sec.querySelector('.ws-step');
+      if (stepSpan) stepSpan.textContent = sub.key;
+      const stepNameSpan = sec.querySelector('.ws-header > div > span:first-child');
+      if (stepNameSpan) stepNameSpan.textContent = sub.stepName;
+      const subInput = sec.querySelector('.sub-name-input');
+      if (subInput) subInput.value = sub.subName; // 항상 2단계 내용으로 덮어씀
+    });
   }
 
   if (container.children.length === 0) {
