@@ -1335,24 +1335,33 @@ function buildStep6() {
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
     const inp = sec.querySelectorAll('.redesign-box input');
-    saved[sec.dataset.key] = { redesign: sec.querySelector('textarea')?.value||'', responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'' };
+    saved[sec.dataset.fkey||sec.dataset.key] = { redesign: sec.querySelector('textarea')?.value||'', responsible:inp[0]?.value||'', deadline:inp[1]?.value||'', kpi:inp[2]?.value||'' };
   });
   container.innerHTML = '';
   if (items.length === 0) { addRedesignItem(); return; }
 
   items.forEach(item => {
-    const key = item.dataset.key;
+    const fkey     = item.dataset.fkey || item.dataset.key;
+    const key      = item.dataset.key;
+    const failure  = item.dataset.failure || '';
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-    const { stepName, subName } = getStepHeader(item);
+    // 5단계 헤더: column 구조 — span[0]=단계·하부단계명, span[1]=고장유형
+    const headerSpans = item.querySelectorAll('.ws-header div span');
+    const stepSubLine = headerSpans[0]?.textContent || '';  // "의사처방 · 환자확인"
     const rootCause = item.querySelector('.root-cause-field input')?.value || '';
     const div = document.createElement('div');
     div.className = 'ws-section';
     div.dataset.key = key;
+    div.dataset.fkey = fkey;
+    div.dataset.failure = failure;
+    div.dataset.stepSubLine = stepSubLine;
     div.innerHTML = `
       <div class="ws-header">
         <span class="ws-step">${stepLabel}</span>
-        <span style="font-size:14px;font-weight:700;color:#fff;flex:1;">${stepName}</span>
-        <span style="font-size:12px;color:rgba(255,255,255,0.75);">${subName}</span>
+        <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.65);">${stepSubLine}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${failure || stepSubLine}</span>
+        </div>
       </div>
       <div class="ws-body">
         ${rootCause ? `<div style="font-size:12px;color:var(--purple);font-weight:600;margin-bottom:10px;padding:8px 12px;background:var(--purple-light);border-radius:var(--radius-sm);">근본원인: ${rootCause}</div>` : ''}
@@ -1368,12 +1377,13 @@ function buildStep6() {
       </div>`;
     container.appendChild(div);
     // 이전 값 복원
-    if (saved[key]) {
-      const ta = div.querySelector('textarea'); if (ta) ta.value = saved[key].redesign;
+    const sv = saved[fkey] || saved[key];
+    if (sv) {
+      const ta = div.querySelector('textarea'); if (ta) ta.value = sv.redesign;
       const inp = div.querySelectorAll('.redesign-box input');
-      if (inp[0]) inp[0].value = saved[key].responsible;
-      if (inp[1]) inp[1].value = saved[key].deadline;
-      if (inp[2]) inp[2].value = saved[key].kpi;
+      if (inp[0]) inp[0].value = sv.responsible;
+      if (inp[1]) inp[1].value = sv.deadline;
+      if (inp[2]) inp[2].value = sv.kpi;
     }
   });
 }
@@ -1411,12 +1421,14 @@ function buildStep7() {
 
   items.forEach(item => {
     const key = item.dataset.key || '1-1';
+    const fkey = item.dataset.fkey || key;
     const stepLabel = item.querySelector('.ws-step')?.textContent || key;
-    const headerSpans = item.querySelectorAll('.ws-header span');
-    const { stepName, subName } = getStepHeader(item);
+    const failure     = item.dataset.failure || '';
+    const stepSubLine = item.dataset.stepSubLine || '';
 
-    // 4단계 RPN 가져오기
-    const beforeItem = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
+    // 4단계 RPN 가져오기 (fkey로 먼저, 없으면 key로)
+    let beforeItem = document.querySelector(`#fmea-step4-container .ws-section[data-fkey="${fkey}"]`);
+    if (!beforeItem) beforeItem = document.querySelector(`#fmea-step4-container .ws-section[data-key="${key}"]`);
     let beforeS = 5, beforeO = 5, beforeD = 5;
     if (beforeItem) {
       const sliders = beforeItem.querySelectorAll('input[type=range]');
@@ -1434,12 +1446,13 @@ function buildStep7() {
     const div = document.createElement('div');
     div.className = 'ws-section';
     div.dataset.key = key;
+    div.dataset.fkey = fkey;
     div.innerHTML = `
       <div class="ws-header">
         <span class="ws-step">${stepLabel}</span>
         <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
-          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName || (stepLabel.split('-')[0]+'단계')}</span>
-          <span style="font-size:14px;font-weight:700;color:#fff;">${subName || stepLabel}</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.65);">${stepSubLine}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">잠재적 고장유형 · ${failure}</span>
         </div>
       </div>
       <div class="ws-body">
@@ -1632,19 +1645,22 @@ function addMonitorFromRedesign(item) {
   const redesignText = item.querySelector('.redesign-box textarea')?.value || '';
   const inputs = item.querySelectorAll('.redesign-box input');
   const responsible = inputs[0]?.value || '';
-  const deadline = inputs[1]?.value || '';
-  const indicator = inputs[2]?.value || '';
-  const rootCause = item.querySelector('[style*="purple"]')?.textContent?.replace('근본원인: ','') || '';
-  const stepLabel = item.querySelector('.ws-step')?.textContent || '';
-  const { stepName, subName: subNameH } = getStepHeader(item);
+  const deadline    = inputs[1]?.value || '';
+  const indicator   = inputs[2]?.value || '';
+  const rootCause   = item.querySelector('[style*="purple"]')?.textContent?.replace('근본원인: ','') || '';
+  const stepLabel   = item.querySelector('.ws-step')?.textContent || '';
+  const failure     = item.dataset.failure || '';
+  const stepSubLine = item.dataset.stepSubLine || '';
   const months = getMonthLabels();
   const container = document.getElementById('fmea-step8-container');
   const div = document.createElement('div');
   div.className = 'monitor-row';
   div.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <span style="font-size:11px;font-weight:700;background:var(--blue);color:#fff;padding:2px 8px;border-radius:4px;">${stepLabel} ${stepName}</span>
-      ${rootCause ? `<span style="font-size:12px;color:var(--purple);font-weight:600;">근본원인: ${rootCause}</span>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;background:var(--blue);color:#fff;padding:2px 8px;border-radius:4px;">${stepLabel}</span>
+      ${stepSubLine ? `<span style="font-size:11px;color:var(--gray-500);">${stepSubLine}</span>` : ''}
+      ${failure ? `<span style="font-size:12px;color:var(--blue);font-weight:700;">· ${failure}</span>` : ''}
+      ${rootCause ? `<span style="font-size:12px;color:var(--purple);font-weight:600;margin-left:4px;">근본원인: ${rootCause}</span>` : ''}
     </div>
     <div class="monitor-header">
       <div class="ws-field" style="flex:1;margin-bottom:0;"><label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;">프로세스 재설계 내용</label><textarea style="min-height:50px;">${redesignText}</textarea></div>
