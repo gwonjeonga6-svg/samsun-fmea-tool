@@ -856,116 +856,68 @@ function getStepHeader(item) {
   return { key, stepLabel, stepName, subName };
 }
 
-// ── 3단계 고장유형 수집 헬퍼 ──
-// 반환: [{subKey, stepName, subName, failure, cause, effect}, ...]
-function getFailureModes() {
-  const result = [];
-  document.querySelectorAll('#fmea-step3-container .ws-section').forEach(sec => {
-    const { key, stepName, subName } = getStepHeader(sec);
-    // 기본 행 (failure-row-base)
-    const baseRow = sec.querySelector('.failure-row-base');
-    if (baseRow) {
-      const tas = baseRow.querySelectorAll('textarea');
-      const failure = tas[0]?.value.trim() || '';
-      const cause   = tas[1]?.value.trim() || '';
-      const effect  = tas[2]?.value.trim() || '';
-      if (failure) result.push({ subKey: key, stepName, subName, failure, cause, effect, rowIdx: 0 });
-    }
-    // 추가 행들 (extra-failure-row)
-    sec.querySelectorAll('.extra-failure-row').forEach((row, idx) => {
-      const tas = row.querySelectorAll('textarea');
-      const failure = tas[0]?.value.trim() || '';
-      const cause   = tas[1]?.value.trim() || '';
-      const effect  = tas[2]?.value.trim() || '';
-      if (failure) result.push({ subKey: key, stepName, subName, failure, cause, effect, rowIdx: idx + 1 });
-    });
-  });
-  return result;
-}
-
-// Step 4 — RPN (고장유형별)
+// Step 4 — RPN
 function buildStep4() {
   const container = document.getElementById('fmea-step4-container');
-  const modes = getFailureModes();
+  const items = document.querySelectorAll('#fmea-step3-container .ws-section');
 
-  // 고장유형별 고유 key: "subKey__rowIdx"
-  const makeKey = m => `${m.subKey}__${m.rowIdx}`;
-
-  // 기존 값 백업 (key: subKey__rowIdx)
-  const saved = {};
-  container.querySelectorAll('.ws-section').forEach(sec => {
-    const sl = sec.querySelectorAll('input[type=range]');
-    saved[sec.dataset.fkey] = {
-      s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5
-    };
-  });
-
-  container.innerHTML = '';
-
-  if (modes.length === 0) {
-    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 3단계에서 잠재적 고장유형을 입력하면 자동으로 표시됩니다.</p></div>`;
+  // 이미 같은 수면 재빌드 안 하되, 이벤트 리스너는 항상 재연결
+  if (container.children.length === items.length && container.children.length > 0) {
+    container.querySelectorAll('.ws-section').forEach(div => {
+      div.querySelectorAll('.rpn-slider').forEach(sl => {
+        // oninput 속성 방식으로 재설정 (가장 확실)
+        sl.oninput = function() { updateRPN4(this); };
+      });
+      // 현재 값으로 즉시 렌더링
+      const firstSl = div.querySelector('.rpn-slider');
+      if (firstSl) updateRPN4(firstSl);
+    });
     setTimeout(updateRPNSummary, 100);
     return;
   }
-
-  // 하부단계별 그룹 헤더 + 고장유형별 RPN 카드
-  let lastSubKey = null;
-  modes.forEach(m => {
-    const fkey = makeKey(m);
-
-    // 하부단계 그룹 헤더
-    if (m.subKey !== lastSubKey) {
-      lastSubKey = m.subKey;
-      const header = document.createElement('div');
-      header.style.cssText = 'background:var(--blue);color:#fff;border-radius:var(--radius-sm);padding:8px 14px;margin-top:14px;margin-bottom:4px;display:flex;align-items:center;gap:10px;';
-      header.innerHTML = `<span style="background:rgba(255,255,255,0.2);border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">${m.subKey}</span>
-        <span style="font-size:11px;color:rgba(255,255,255,0.7);">${m.stepName}</span>
-        <span style="font-size:13px;font-weight:700;">${m.subName}</span>`;
-      container.appendChild(header);
-    }
-
+  // 기존 값 백업
+  const saved = {};
+  container.querySelectorAll('.ws-section').forEach(sec => {
+    const sl = sec.querySelectorAll('input[type=range]');
+    saved[sec.dataset.key] = {
+      s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
+      scope: sec.querySelector('select')?.value||'',
+      priority: sec.querySelector('input[type=text]')?.value||''
+    };
+  });
+  container.innerHTML = '';
+  items.forEach(item => {
+    const { key, stepLabel, stepName, subName } = getStepHeader(item);
     const div = document.createElement('div');
     div.className = 'ws-section';
-    div.dataset.key = m.subKey;   // 단계 선정용 (기존 호환)
-    div.dataset.fkey = fkey;       // 고장유형 고유 키
-    div.dataset.failure = m.failure;
-    div.dataset.cause = m.cause;
-    div.dataset.effect = m.effect;
-
+    div.dataset.key = key;
     div.innerHTML = `
-      <div class="ws-header" style="gap:10px;">
-        <span class="ws-step">${m.subKey}</span>
+      <div class="ws-header">
+        <span class="ws-step">${stepLabel}</span>
         <div style="display:flex;flex-direction:column;flex:1;gap:2px;">
-          <span style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:600;">잠재적 고장유형</span>
-          <span style="font-size:14px;font-weight:700;color:#fff;">${m.failure}</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">${stepName}</span>
+          <span style="font-size:14px;font-weight:700;color:#fff;">${subName}</span>
         </div>
       </div>
       <div class="ws-body">
-        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:140px;background:var(--gray-50);border-radius:4px;padding:6px 10px;">
-            <div style="font-size:10px;color:var(--gray-400);font-weight:700;margin-bottom:2px;">잠재적 원인</div>
-            <div style="font-size:12px;color:var(--gray-700);">${m.cause || '—'}</div>
-          </div>
-          <div style="flex:1;min-width:140px;background:var(--gray-50);border-radius:4px;padding:6px 10px;">
-            <div style="font-size:10px;color:var(--gray-400);font-weight:700;margin-bottom:2px;">잠재적 영향</div>
-            <div style="font-size:12px;color:var(--gray-700);">${m.effect || '—'}</div>
-          </div>
-        </div>
         <div class="rpn-box">
           <div class="rpn-title">RPN 점수 산정</div>
           <div class="rpn-sliders">
-            <div class="rpn-sl"><label>심각성 (S)</label>
+            <div class="rpn-sl">
+              <label>심각성 (S)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
-            <div class="rpn-sl"><label>발생가능성 (O)</label>
+            <div class="rpn-sl">
+              <label>발생가능성 (O)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
-            <div class="rpn-sl"><label>발견가능성 (D)</label>
+            <div class="rpn-sl">
+              <label>발견가능성 (D)</label>
               <div class="sl-row"><input type="range" min="1" max="10" value="5" class="rpn-slider"><span class="sl-val">5</span></div>
             </div>
           </div>
           <div class="rpn-result">
-            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>)</div>
+            <div class="rpn-formula">RPN = S(<span class="fs">5</span>) × O(<span class="fo">5</span>) × D(<span class="fd">5</span>) &nbsp;<span style="font-size:10px;color:var(--gray-400);">※ 슬라이더 초기값 5×5×5=125</span></div>
             <div class="rpn-score-area">
               <span class="rpn-lbl">RPN</span>
               <span class="rpn-val mid rpn-num">125</span>
@@ -974,22 +926,20 @@ function buildStep4() {
           </div>
         </div>
       </div>`;
-
     container.appendChild(div);
-
+    // 슬라이더 oninput 직접 설정
     div.querySelectorAll('.rpn-slider').forEach(sl => {
       sl.oninput = function() { updateRPN4(this); };
     });
-
     // 이전 값 복원
-    const sv = saved[fkey];
-    if (sv) {
+    if (saved[key]) {
       const sl = div.querySelectorAll('.rpn-slider');
-      if (sl[0]) { sl[0].value = sv.s; sl[1].value = sv.o; sl[2].value = sv.d; }
+      if (sl[0]) { sl[0].value = saved[key].s; sl[1].value = saved[key].o; sl[2].value = saved[key].d; }
+      const sel = div.querySelector('select'); if (sel) sel.value = saved[key].scope;
+      const pri = div.querySelector('input[type=text]'); if (pri) pri.value = saved[key].priority;
     }
     setTimeout(() => updateRPN4(div.querySelector('.rpn-slider')), 0);
   });
-
   setTimeout(updateRPNSummary, 100);
 }
 
@@ -1028,98 +978,110 @@ function updateRPNSummary() {
     return;
   }
 
-  // 단계별 그룹핑
-  const stepMap = {};
-  const stepOrder = [];
-  items.forEach(item => {
+  // 고장유형별 데이터 수집
+  const rows = items.map(item => {
+    const fkey   = item.dataset.fkey || item.dataset.key;
     const subKey = item.dataset.key;
-    const stepKey = subKey.split('-')[0];
-    const failure = item.dataset.failure || item.querySelector('.ws-header span:last-child')?.textContent || subKey;
+    const failure = item.dataset.failure || '';
     const sliders = item.querySelectorAll('.rpn-slider');
-    const s = parseInt(sliders[0]?.value||5);
-    const o = parseInt(sliders[1]?.value||5);
-    const d = parseInt(sliders[2]?.value||5);
+    const s = parseInt(sliders[0]?.value || 5);
+    const o = parseInt(sliders[1]?.value || 5);
+    const d = parseInt(sliders[2]?.value || 5);
     const rpn = s * o * d;
-    const fkey = item.dataset.fkey || subKey;
-    const sel = item.dataset.selected === '1';
-
-    // 단계명은 헤더 div에서 읽기
-    const stepNameEl = item.querySelector('.ws-header div > span:first-child');
-    const stepName = stepNameEl?.textContent || `${stepKey}단계`;
-    const subNameEl = item.querySelector('.ws-header div > span:last-child');
-    const subName = subNameEl?.textContent || subKey;
-
-    if (!stepMap[subKey]) {
-      if (!stepOrder.includes(subKey)) stepOrder.push(subKey);
-      stepMap[subKey] = { stepKey, stepName, subKey, subName, failures: [], ci: 0 };
+    // S≥8 자동 선정 처리
+    if (s >= 8 && item.dataset.selected !== '1') {
+      item.dataset.selected = '1';
+      item.dataset.autoSelected = '1';
     }
-    stepMap[subKey].failures.push({ fkey, failure, s, o, d, rpn, sel });
-    stepMap[subKey].ci += rpn;
+    const sel = item.dataset.selected === '1';
+    // 하부단계명
+    const stepNameEl = item.querySelector('.ws-header div > span:first-child');
+    const subNameEl  = item.querySelector('.ws-header div > span:last-child');
+    const stepName = stepNameEl?.textContent || '';
+    const subName  = subNameEl?.textContent || subKey;
+    return { fkey, subKey, stepName, subName, failure, s, o, d, rpn, sel, autoSel: s >= 8 };
   });
 
-  // CI 기준 순위
-  const sorted = [...stepOrder].sort((a, b) => stepMap[b].ci - stepMap[a].ci);
+  // RPN 순위 계산 (높은 순)
+  const sorted = [...rows].sort((a, b) => b.rpn - a.rpn);
   const rankMap = {};
-  sorted.forEach((k, i) => { rankMap[k] = i + 1; });
-  const rankColors = ['#b03030','#c2410c','#8a5e00','#0e6b4f'];
-  const getRankColor = r => rankColors[Math.min(r-1, rankColors.length-1)];
+  sorted.forEach((r, i) => { rankMap[r.fkey] = i + 1; });
+
+  // 하부단계별 그룹핑 (표시 순서 유지)
+  const subMap = {};
+  const subOrder = [];
+  rows.forEach(r => {
+    if (!subMap[r.subKey]) { subMap[r.subKey] = { subKey: r.subKey, subName: r.subName, stepName: r.stepName, failures: [] }; subOrder.push(r.subKey); }
+    subMap[r.subKey].failures.push(r);
+  });
+
+  const rpnColor = rpn => rpn >= 200 ? '#b03030' : rpn >= 100 ? '#c2410c' : rpn >= 50 ? '#8a5e00' : '#374151';
+  const rpnBg    = rpn => rpn >= 200 ? '#fdf0f0' : rpn >= 100 ? '#fff1ea' : rpn >= 50 ? '#fdf5e0' : '#f5f6f8';
 
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
     <thead><tr style="background:var(--gray-100);">
-      <th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--gray-200);">단계</th>
       <th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--gray-200);">하부단계</th>
       <th style="padding:7px 10px;text-align:left;border-bottom:2px solid var(--gray-200);">잠재적 고장유형</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);">S</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);">O</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);">D</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);color:var(--orange);font-weight:800;">RPN</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);">CI 합계</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);">단계 선정</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:32px;">S</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:32px;">O</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:32px;">D</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);color:var(--orange);font-weight:800;width:60px;">RPN</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:50px;">순위</th>
+      <th style="padding:7px 8px;text-align:center;border-bottom:2px solid var(--gray-200);width:90px;">선정</th>
     </tr></thead><tbody>`;
 
-  stepOrder.forEach(subKey => {
-    const step = stepMap[subKey];
-    const rank = rankMap[subKey];
-    const rankBg = getRankColor(rank);
-    const sel = step.failures.some(f => f.sel);
-
-    step.failures.forEach((f, fi) => {
-      const rpnColor = f.rpn >= 200 ? '#b03030' : f.rpn >= 100 ? '#c2410c' : f.rpn >= 50 ? '#8a5e00' : '#374151';
+  subOrder.forEach(subKey => {
+    const group = subMap[subKey];
+    group.failures.forEach((r, fi) => {
+      const rank = rankMap[r.fkey];
+      const rankColor = rank <= 3 ? '#b03030' : rank <= 7 ? '#c2410c' : rank <= 15 ? '#8a5e00' : '#374151';
+      const rowBg = r.sel ? 'background:#f0f7ff;' : '';
+      const autoTag = r.autoSel ? `<span style="font-size:9px;background:#fdf0f0;color:#b03030;border:1px solid #f5c6c6;border-radius:3px;padding:0 4px;margin-left:4px;">S≥8 자동</span>` : '';
       const isFirst = fi === 0;
-      html += `<tr style="border-bottom:1px solid var(--gray-100);">`;
+      html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">`;
       if (isFirst) {
-        html += `<td rowspan="${step.failures.length}" style="padding:7px 10px;vertical-align:middle;font-size:11px;color:var(--gray-500);border-left:3px solid ${rankBg};">${step.stepKey}단계</td>
-        <td rowspan="${step.failures.length}" style="padding:7px 10px;vertical-align:middle;font-size:12px;font-weight:600;color:var(--blue);">${step.subKey} ${step.subName}</td>`;
-      }
-      html += `<td style="padding:7px 10px;">${f.failure}</td>
-        <td style="padding:7px 8px;text-align:center;">${f.s}</td>
-        <td style="padding:7px 8px;text-align:center;">${f.o}</td>
-        <td style="padding:7px 8px;text-align:center;">${f.d}</td>
-        <td style="padding:7px 8px;text-align:center;font-weight:800;color:${rpnColor};">${f.rpn}</td>`;
-      if (isFirst) {
-        html += `<td rowspan="${step.failures.length}" style="padding:7px 10px;text-align:center;vertical-align:middle;border-left:2px solid ${rankBg};">
-          <div style="font-size:16px;font-weight:900;color:${rankBg};">${step.ci}</div>
-          <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">CI ${rank}순위</div>
-        </td>
-        <td rowspan="${step.failures.length}" style="padding:7px 10px;text-align:center;vertical-align:middle;">
-          <button onclick="selectStepCI('${subKey}')" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;width:74px;${sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-500);border:2px solid var(--gray-200);'}">
-            ${sel ? '✅ 선정됨' : '선정하기'}
-          </button>
+        html += `<td rowspan="${group.failures.length}" style="padding:7px 10px;vertical-align:middle;border-left:3px solid var(--blue);">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);">${subKey}</div>
+          <div style="font-size:12px;color:var(--gray-700);">${group.subName}</div>
+          <div style="font-size:10px;color:var(--gray-400);">${group.stepName}</div>
         </td>`;
       }
+      html += `<td style="padding:7px 10px;">${r.failure}${autoTag}</td>
+        <td style="padding:7px 8px;text-align:center;font-weight:${r.s>=8?'900':'400'};color:${r.s>=8?'#b03030':'var(--gray-700)'};">${r.s}</td>
+        <td style="padding:7px 8px;text-align:center;color:var(--gray-700);">${r.o}</td>
+        <td style="padding:7px 8px;text-align:center;color:var(--gray-700);">${r.d}</td>
+        <td style="padding:7px 8px;text-align:center;">
+          <span style="font-size:14px;font-weight:900;color:${rpnColor(r.rpn)};background:${rpnBg(r.rpn)};padding:2px 7px;border-radius:4px;">${r.rpn}</span>
+        </td>
+        <td style="padding:7px 8px;text-align:center;">
+          <span style="font-size:12px;font-weight:700;color:${rankColor};">${rank}위</span>
+        </td>
+        <td style="padding:7px 8px;text-align:center;">
+          <button onclick="toggleFailureSelect('${r.fkey}')"
+            style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;
+              ${r.sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-500);border:2px solid var(--gray-200);'}">
+            ${r.sel ? '✅ 선정' : '선정하기'}
+          </button>
+        </td>`;
       html += '</tr>';
     });
   });
 
-  html += '</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 단계 선정 버튼 클릭 시 해당 하부단계의 고장유형 전체가 5단계(근본원인 규명) 대상으로 지정됩니다.</p>';
+  const selCount = rows.filter(r => r.sel).length;
+  html += `</tbody></table>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">
+      💡 선정된 고장유형: <strong style="color:var(--blue);">${selCount}개</strong> — 선정된 고장유형이 5단계 근본원인 규명 대상이 됩니다.
+      &nbsp;|&nbsp; ⚠️ 심각성(S) 8점 이상은 자동 선정됩니다.
+    </p>`;
   table.innerHTML = html;
 }
 
-function selectStepCI(subKey) {
-  const items = document.querySelectorAll('#fmea-step4-container .ws-section');
-  let anySelected = false;
-  items.forEach(item => { if (item.dataset.key === subKey && item.dataset.selected === '1') anySelected = true; });
-  items.forEach(item => { if (item.dataset.key === subKey) item.dataset.selected = anySelected ? '0' : '1'; });
+function toggleFailureSelect(fkey) {
+  const item = document.querySelector(`#fmea-step4-container .ws-section[data-fkey="${fkey}"]`);
+  if (!item) return;
+  // S≥8 자동선정된 항목은 해제 불가
+  if (item.dataset.autoSelected === '1') return;
+  item.dataset.selected = item.dataset.selected === '1' ? '0' : '1';
   updateRPNSummary();
 }
 
@@ -1127,70 +1089,71 @@ function buildStep5() {
   const container = document.getElementById('fmea-step5-container');
   const allItems = [...document.querySelectorAll('#fmea-step4-container .ws-section')];
 
-  // 선정된 항목 필터링 (선정 없으면 전체)
+  // 선정된 고장유형만 필터 (선정 없으면 전체)
   const selected = allItems.filter(i => i.dataset.selected === '1');
   const items = selected.length > 0 ? selected : allItems;
 
-  // 현재 표시 중인 fkey 목록과 비교
-  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.fkey).join(',');
+  // 현재 표시 중인 fkey 목록과 비교 → 다를 때만 재빌드
+  const curKeys = [...container.querySelectorAll('.ws-section')].map(s => s.dataset.fkey || s.dataset.key).join(',');
   const newKeys = items.map(i => i.dataset.fkey || i.dataset.key).join(',');
   if (curKeys === newKeys && container.children.length > 0) return;
 
   // 기존 값 백업
   const saved = {};
   container.querySelectorAll('.ws-section').forEach(sec => {
-    const inp = sec.querySelectorAll('input[type=text], textarea');
+    const inp = sec.querySelectorAll('input[type=text]');
     saved[sec.dataset.fkey || sec.dataset.key] = {
-      w1: inp[0]?.value||'', w2: inp[1]?.value||'', w3: inp[2]?.value||'',
-      w4: inp[3]?.value||'', w5: inp[4]?.value||'', root: inp[5]?.value||''
+      w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'',
+      w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||''
     };
   });
   container.innerHTML = '';
 
   if (items.length === 0) {
-    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 4단계에서 개선활동 범위를 선정해주세요.</p></div>`;
+    container.innerHTML = `<div class="card"><p style="color:var(--gray-400);font-size:13px;">💡 4단계에서 고장유형을 선정해주세요.</p></div>`;
     return;
   }
 
   if (selected.length > 0) {
+    const autoCount = selected.filter(i => i.dataset.autoSelected === '1').length;
     const banner = document.createElement('div');
     banner.className = 'info-box blue';
     banner.style.marginBottom = '12px';
-    banner.innerHTML = `✅ 4단계에서 <strong>${selected.length}개 고장유형</strong>이 선정되었습니다. 선정된 고장유형에 대해 5Why 분석을 진행합니다.`;
+    banner.innerHTML = `✅ <strong>${selected.length}개 고장유형</strong>이 선정되었습니다.${autoCount > 0 ? ` (S≥8 자동선정 ${autoCount}개 포함)` : ''} 선정된 고장유형에 대해 5Why 분석을 진행합니다.`;
     container.appendChild(banner);
   }
 
   items.forEach(item => {
-    const fkey = item.dataset.fkey || item.dataset.key;
-    const subKey = item.dataset.key;
+    const fkey    = item.dataset.fkey || item.dataset.key;
+    const subKey  = item.dataset.key;
     const failure = item.dataset.failure || '';
     const cause   = item.dataset.cause || '';
     const sliders = item.querySelectorAll('input[type=range]');
     const s = sliders[0]?.value||'-', o = sliders[1]?.value||'-', d = sliders[2]?.value||'-';
     const rpn = sliders.length >= 3 ? parseInt(s)*parseInt(o)*parseInt(d) : '-';
-
-    // 하부단계명 읽기
     const stepNameEl = item.querySelector('.ws-header div > span:first-child');
     const subNameEl  = item.querySelector('.ws-header div > span:last-child');
     const stepName = stepNameEl?.textContent || '';
     const subName  = subNameEl?.textContent || subKey;
+    const autoSel  = item.dataset.autoSelected === '1';
 
-    const div = createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn);
+    const div = createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, autoSel);
     container.appendChild(div);
     if (saved[fkey]) {
-      const inp = div.querySelectorAll('input[type=text], textarea');
+      const inp = div.querySelectorAll('input[type=text]');
       ['w1','w2','w3','w4','w5','root'].forEach((k,i) => { if (inp[i]) inp[i].value = saved[fkey][k]; });
     }
   });
 }
 
-function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn) {
-  const rpnColor = rpn >= 200 ? '#b03030' : rpn >= 100 ? '#c2410c' : rpn >= 50 ? '#8a5e00' : '#0e6b4f';
+function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, autoSel) {
   const rpnBadge = rpn ? `<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;">RPN ${rpn}</span>` : '';
+  const autoTag  = autoSel ? `<span style="font-size:10px;background:rgba(255,100,100,0.3);color:#fff;border-radius:3px;padding:1px 6px;margin-left:4px;">S≥8 자동선정</span>` : '';
   const div = document.createElement('div');
   div.className = 'ws-section';
   div.dataset.fkey = fkey;
   div.dataset.key  = subKey;
+  div.dataset.failure = failure;
   div.innerHTML = `
     <div class="ws-header" style="flex-direction:column;align-items:flex-start;gap:4px;">
       <div style="display:flex;align-items:center;gap:8px;width:100%;">
@@ -1199,7 +1162,7 @@ function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn) {
           <span style="font-size:10px;color:rgba(255,255,255,0.6);">${stepName} · ${subName}</span>
           <span style="font-size:14px;font-weight:700;color:#fff;">🔴 고장유형: ${failure}</span>
         </div>
-        ${rpnBadge}
+        ${rpnBadge}${autoTag}
       </div>
       ${cause ? `<div style="font-size:11px;color:rgba(255,255,255,0.75);padding-left:42px;">잠재적 원인: ${cause}</div>` : ''}
     </div>
@@ -1808,16 +1771,12 @@ function saveFMEA() {
   }));
   data.step4 = [...document.querySelectorAll('#fmea-step4-container .ws-section')].map(item=>{
     const sl = item.querySelectorAll('input[type=range]');
-    return { key: item.dataset.key, fkey: item.dataset.fkey||item.dataset.key,
-      failure: item.dataset.failure||'', cause: item.dataset.cause||'', effect: item.dataset.effect||'',
-      selected: item.dataset.selected||'0',
-      s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5 };
+    return { key: item.dataset.key, s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
+      scope: item.querySelector('select')?.value||'', priority: item.querySelector('input[type=text]')?.value||'' };
   });
   data.step5 = [...document.querySelectorAll('#fmea-step5-container .ws-section')].map(item=>{
     const inp = item.querySelectorAll('input[type=text]');
-    return { key: item.dataset.key, fkey: item.dataset.fkey||item.dataset.key,
-      w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'',
-      w4:inp[3]?.value||'', w5:inp[4]?.value||'', root:inp[5]?.value||'' };
+    return { key: item.dataset.key, w1:inp[0]?.value||'', w2:inp[1]?.value||'', w3:inp[2]?.value||'', w4:inp[3]?.value||'', root:inp[4]?.value||'' };
   });
   data.step6 = [...document.querySelectorAll('#fmea-step6-container .ws-section')].map(item=>{
     const inp = item.querySelectorAll('.redesign-box input[type=text]');
@@ -2019,27 +1978,24 @@ function downloadWord() {
   // 4단계 RPN
   let rpnRows = '';
   document.querySelectorAll('#fmea-step4-container .ws-section').forEach(item => {
-    const subKey = item.dataset.key || '';
-    const failure = item.dataset.failure || '';
-    const cause   = item.dataset.cause || '';
-    const effect  = item.dataset.effect || '';
+    const { stepLabel, stepName } = getHeaderInfo(item);
     const sliders = item.querySelectorAll('input[type=range]');
     if (sliders.length >= 3) {
       const s = sliders[0].value, o = sliders[1].value, d = sliders[2].value;
       const rpn = parseInt(s)*parseInt(o)*parseInt(d);
-      rpnRows += `<tr><td>${subKey}</td><td>${failure}</td><td>${cause}</td><td>${effect}</td><td style="text-align:center">${s}</td><td style="text-align:center">${o}</td><td style="text-align:center">${d}</td><td style="text-align:center;font-weight:bold;color:${rpn>=200?'#b03030':rpn>=100?'#c2410c':'#374151'}">${rpn}</td></tr>`;
+      const sel = item.querySelector('select')?.value || '';
+      const priority = item.querySelector('input[type=text]')?.value || '';
+      rpnRows += `<tr><td>${stepLabel} ${stepName}</td><td style="text-align:center">${s}</td><td style="text-align:center">${o}</td><td style="text-align:center">${d}</td><td style="text-align:center;font-weight:bold">${rpn}</td><td>${sel}</td><td>${priority}</td></tr>`;
     }
   });
 
   // 5Why
   let whyRows = '';
   document.querySelectorAll('#fmea-step5-container .ws-section').forEach(item => {
-    const subKey = item.dataset.key || '';
-    const failure = item.dataset.failure || item.querySelector('.ws-header span[style*="font-weight:700"]')?.textContent?.replace('🔴 고장유형: ','') || '';
+    const { stepLabel, stepName, subName } = getHeaderInfo(item);
     const inputs = item.querySelectorAll('input[type=text]');
-    const w1=inputs[0]?.value||'', w2=inputs[1]?.value||'', w3=inputs[2]?.value||'',
-          w4=inputs[3]?.value||'', w5=inputs[4]?.value||'', root=inputs[5]?.value||'';
-    whyRows += `<tr><td>${subKey}</td><td>${failure}</td><td>${w1}</td><td>${w2}</td><td>${w3}</td><td>${w4||w5}</td><td><strong>${root}</strong></td></tr>`;
+    const w1=inputs[0]?.value||'', w2=inputs[1]?.value||'', w3=inputs[2]?.value||'', w4=inputs[3]?.value||'', w5=inputs[4]?.value||'', root=inputs[5]?.value||'';
+    whyRows += `<tr><td>${stepLabel}</td><td>${stepName}</td><td>${subName}</td><td>${w1}</td><td>${w2}</td><td>${w3}</td><td>${w4||w5}</td><td><strong>${root}</strong></td></tr>`;
   });
 
   // 6단계 재설계
@@ -2128,14 +2084,14 @@ function downloadWord() {
 <h2>■ 4단계 — RPN 우선순위</h2>
 <table>
   <colgroup><col style="width:28%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:16%"><col style="width:12%"></colgroup>
-  <tr><th>하부단계</th><th>잠재적 고장유형</th><th>잠재적 원인</th><th>잠재적 영향</th><th>심각성(S)</th><th>발생가능성(O)</th><th>발견가능성(D)</th><th>RPN</th></tr>
+  <tr><th>단계/프로세스</th><th>심각성(S)</th><th>발생가능성(O)</th><th>발견가능성(D)</th><th>RPN</th><th>개선활동 범위</th><th>우선순위</th></tr>
   ${rpnRows || '<tr><td colspan="7">데이터 없음</td></tr>'}
 </table>
 
 <h2>■ 5단계 — 근본원인 (5Why)</h2>
 <table>
   <colgroup><col style="width:6%"><col style="width:12%"><col style="width:14%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:16%"></colgroup>
-  <tr><th>하부단계</th><th>잠재적 고장유형</th><th>Why 1</th><th>Why 2</th><th>Why 3</th><th>Why 4~5</th><th>근본원인</th></tr>
+  <tr><th>단계</th><th>프로세스</th><th>하부단계</th><th>Why 1</th><th>Why 2</th><th>Why 3</th><th>Why 4~5</th><th>근본원인</th></tr>
   ${whyRows || '<tr><td colspan="8">데이터 없음</td></tr>'}
 </table>
 
