@@ -269,6 +269,14 @@
     body.print-mode #fmea-step4-container { display:none !important; }
     body.print-mode #rpn-summary-card { display:block !important; box-shadow:none !important; }
     body.print-mode #rpn-summary-card button { display:none !important; }
+    /* 3단계: 카드 숨기고 표 표시 */
+    body.print-mode #fmea-step3-container { display:none !important; }
+    body.print-mode #step3-print-table { display:block !important; }
+    body.print-mode #step3-print-table table { width:100%; border-collapse:collapse; font-size:9pt; }
+    body.print-mode #step3-print-table th { background:#1a5fa8; color:#fff; padding:5px 7px; text-align:left; font-weight:700; border:1px solid #1a5fa8; }
+    body.print-mode #step3-print-table td { padding:4px 7px; border:1px solid #dde1e9; vertical-align:top; line-height:1.4; }
+    body.print-mode #step3-print-table tr:nth-child(even) td { background:#f5f7fb; }
+    body.print-mode #step3-print-table .sub-header td { background:#eaf1fb !important; color:#1a5fa8; font-weight:700; font-size:9pt; }
     /* 7단계: 슬라이더 숨기고 수식+값만 표시 */
     body.print-mode .rpn-sliders,
     body.print-mode .paper-sliders { display:none !important; }
@@ -441,6 +449,8 @@
             <div class="card-desc">각 하부단계별로 발생 가능한 잠재적 고장유형, 원인, 영향을 기술합니다. 하나의 하부단계에 여러 고장유형이 있을 수 있습니다.</div>
           </div>
         </div>
+        <!-- 인쇄용 표 (화면에서는 숨김) -->
+        <div id="step3-print-table" style="display:none;"></div>
         <div id="fmea-step3-container"></div>
         <button class="btn btn-ghost btn-sm" onclick="addStep3Item()" style="margin-bottom:12px;">+ 하부단계 항목 추가</button>
         <div class="btn-row">
@@ -2243,8 +2253,67 @@ function copyToSheet() {
   });
 }
 
+// 3단계 인쇄용 표 생성
+function buildStep3PrintTable() {
+  const wrap = document.getElementById('step3-print-table');
+  if (!wrap) return;
+
+  const rows = [];
+  document.querySelectorAll('#fmea-step3-container .ws-section').forEach(sec => {
+    const subKey  = sec.dataset.key || sec.querySelector('.ws-step')?.textContent || '';
+    const stepNameEl = sec.querySelector('.ws-header > div > span:first-child');
+    const subInput   = sec.querySelector('.sub-name-input');
+    const stepName = stepNameEl?.textContent?.trim() || '';
+    const subName  = subInput?.value?.trim() || '';
+
+    // 기본 행
+    const baseTas = sec.querySelector('.ws-row.cols3, .failure-row-base')?.querySelectorAll('textarea');
+    if (baseTas && baseTas[0]?.value.trim()) {
+      rows.push({ subKey, stepName, subName, failure: baseTas[0].value.trim(), cause: baseTas[1]?.value.trim()||'', effect: baseTas[2]?.value.trim()||'', isFirst: true });
+    }
+    // 추가 행
+    sec.querySelectorAll('.extra-failure-row').forEach(row => {
+      const tas = row.querySelectorAll('textarea');
+      if (tas[0]?.value.trim()) {
+        rows.push({ subKey, stepName, subName, failure: tas[0].value.trim(), cause: tas[1]?.value.trim()||'', effect: tas[2]?.value.trim()||'', isFirst: false });
+      }
+    });
+  });
+
+  if (rows.length === 0) { wrap.innerHTML = ''; return; }
+
+  // 하부단계별 rowspan 계산
+  const subCount = {};
+  rows.forEach(r => { subCount[r.subKey] = (subCount[r.subKey]||0) + 1; });
+
+  let html = `<table>
+    <thead><tr>
+      <th style="width:8%">하부단계</th>
+      <th style="width:20%">하부단계명</th>
+      <th style="width:24%">잠재적 고장유형</th>
+      <th style="width:24%">잠재적 원인</th>
+      <th style="width:24%">잠재적 영향</th>
+    </tr></thead><tbody>`;
+
+  const rendered = new Set();
+  rows.forEach(r => {
+    const isFirstOfSub = !rendered.has(r.subKey);
+    rendered.add(r.subKey);
+    html += `<tr>`;
+    if (isFirstOfSub) {
+      html += `<td rowspan="${subCount[r.subKey]}" style="text-align:center;font-weight:700;color:#1a5fa8;background:#eaf1fb;">${r.subKey}</td>
+               <td rowspan="${subCount[r.subKey]}" style="background:#eaf1fb;font-weight:600;">${r.stepName}<br><span style="font-weight:400;font-size:8.5pt;">${r.subName}</span></td>`;
+    }
+    html += `<td>${r.failure}</td><td>${r.cause}</td><td>${r.effect}</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 // 전체 PDF 출력
 function printReport() {
+  buildStep3PrintTable();
   document.body.classList.add('print-mode');
   for (let i = 1; i <= 8; i++) {
     const el = document.getElementById('step' + i);
