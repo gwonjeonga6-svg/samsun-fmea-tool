@@ -1182,10 +1182,10 @@ function updateRPNSummary() {
       const rank = rankMap[r.fkey];
       const rowBg = r.sel ? 'background:#f0f7ff;' : '';
       const isFirst = fi === 0;
-      const autoTag = r.autoSel ? `<span style="font-size:9px;background:#fdf0f0;color:#b03030;border:1px solid #f5c6c6;border-radius:3px;padding:1px 5px;margin-left:5px;">S≥8 필수</span>` : '';
+      const autoTag = '';
       const btnStyle = r.sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-600);border:2px solid var(--gray-300);';
-      const btnLabel = r.autoSel ? '✅ 자동선정' : r.sel ? '✅ 선정됨' : '선정하기';
-      const btnAttr  = r.autoSel ? 'disabled' : `onclick="toggleSelect('${r.fkey}')"`;
+      const btnLabel = r.sel ? '✅ 선정됨' : '선정하기';
+      const btnAttr  = `onclick="toggleSelect('${r.fkey}')"`;
       html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">`;
       if (isFirst) {
         html += `<td rowspan="${group.failures.length}" style="padding:7px 10px;vertical-align:middle;border-left:3px solid var(--blue);">
@@ -1195,20 +1195,20 @@ function updateRPNSummary() {
         </td>`;
       }
       html += `<td style="padding:7px 10px;">${r.failure}${autoTag}</td>
-        <td style="padding:7px 8px;text-align:center;font-weight:${r.s>=8?'900':'400'};color:${r.s>=8?'#b03030':'var(--gray-700)'};">${r.s}</td>
+        <td style="padding:7px 8px;text-align:center;font-weight:400;color:var(--gray-700);">${r.s}</td>
         <td style="padding:7px 8px;text-align:center;">${r.o}</td>
         <td style="padding:7px 8px;text-align:center;">${r.d}</td>
         <td style="padding:7px 8px;text-align:center;"><span style="font-size:14px;font-weight:900;color:${rpnColor(r.rpn)};background:${rpnBg(r.rpn)};padding:2px 7px;border-radius:4px;">${r.rpn}</span></td>
         <td style="padding:7px 8px;text-align:center;font-weight:700;color:${rankColor(rank)};">${rank}위</td>
         <td style="padding:7px 8px;text-align:center;">
-          <button ${btnAttr} style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:${r.autoSel?'default':'pointer'};white-space:nowrap;${btnStyle}">${btnLabel}</button>
+          <button ${btnAttr} style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;${btnStyle}">${btnLabel}</button>
         </td>`;
       html += '</tr>';
     });
   });
 
   const selCount = rows.filter(r => r.sel).length;
-  html += `</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 선정된 고장유형 <strong style="color:var(--blue);">${selCount}개</strong>가 5단계 대상이 됩니다. ⚠️ S≥8 자동선정 고정</p>`;
+  html += `</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 선정된 고장유형 <strong style="color:var(--blue);">${selCount}개</strong>가 5단계 대상이 됩니다.</p>`;
   table.innerHTML = html;
 }
 
@@ -1249,7 +1249,7 @@ function buildStep5() {
     const banner = document.createElement('div');
     banner.className = 'info-box blue';
     banner.style.marginBottom = '12px';
-    banner.innerHTML = `✅ <strong>${selected.length}개 고장유형</strong> 선정됨${autoCount > 0 ? ` (S≥8 자동 ${autoCount}개 포함)` : ''}`;
+    banner.innerHTML = `✅ <strong>${selected.length}개 고장유형</strong> 선정됨`;
     container.appendChild(banner);
   }
 
@@ -1276,7 +1276,7 @@ function buildStep5() {
 
 function createWhyItem(fkey, subKey, stepName, subName, failure, cause, rpn, autoSel) {
   const rpnBadge = rpn ? `<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px;">RPN ${rpn}</span>` : '';
-  const autoTag  = autoSel ? `<span style="font-size:10px;background:rgba(255,100,100,0.3);color:#fff;border-radius:3px;padding:1px 6px;margin-left:4px;">S≥8 필수</span>` : '';
+  const autoTag  = '';
   const div = document.createElement('div');
   div.className = 'ws-section';
   div.dataset.fkey = fkey;
@@ -2641,7 +2641,7 @@ function buildStep4PrintTable() {
     group.failures.forEach((r, fi) => {
       const rank = rankMap[r.fkey];
       const isFirst = fi === 0;
-      const selTag = r.auto ? '✅ S≥8' : r.sel ? '✅ 선정' : '';
+      const selTag = r.sel ? '✅ 선정' : '';
       const rowBg = r.sel ? 'background:#f0f7ff;' : '';
       html += `<tr style="${rowBg}">`;
       if (isFirst) {
@@ -2650,7 +2650,7 @@ function buildStep4PrintTable() {
       }
       html += `<td>${r.failure}</td>
                <td style="font-size:8.5pt;">${r.cause}</td>
-               <td style="text-align:center;${r.s>=8?'font-weight:900;color:#b03030;':''}">${r.s}</td>
+               <td style="text-align:center;">${r.s}</td>
                <td style="text-align:center;">${r.o}</td>
                <td style="text-align:center;">${r.d}</td>
                <td style="text-align:center;${rpnColor(r.rpn)}">${r.rpn}</td>
