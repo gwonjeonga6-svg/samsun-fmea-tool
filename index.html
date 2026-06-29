@@ -2824,7 +2824,8 @@ function goStep(n) {
         const sl = item.querySelectorAll('input[type=range]');
         if (sl[0]) { sl[0].value = sd.s||5; sl[1].value = sd.o||5; sl[2].value = sd.d||5; }
         if (sd.selected) item.dataset.selected = sd.selected;
-        if (sd.autoSelected) item.dataset.autoSelected = sd.autoSelected;
+        // autoSelected 복원 제거 (S≥8 자동선택 기능 삭제됨)
+        item.dataset.autoSelected = '0';
         if (sl[0]) updateRPN4(sl[0]);
       });
       window._savedStep4 = null;
