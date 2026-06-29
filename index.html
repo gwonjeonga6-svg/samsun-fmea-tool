@@ -995,7 +995,7 @@ function buildStep4() {
     const sl = sec.querySelectorAll('input[type=range]');
     saved[sec.dataset.fkey || sec.dataset.key] = {
       s: sl[0]?.value||5, o: sl[1]?.value||5, d: sl[2]?.value||5,
-      selected: sec.dataset.selected||'0', autoSelected: sec.dataset.autoSelected||'0'
+      selected: sec.dataset.selected||'0', autoSelected: '0'
     };
   });
 
@@ -1030,7 +1030,7 @@ function buildStep4() {
     div.dataset.cause = m.cause;
     div.dataset.effect = m.effect;
     div.dataset.selected = sv.selected || '0';
-    div.dataset.autoSelected = sv.autoSelected || '0';
+    div.dataset.autoSelected = '0'; // 자동선택 기능 제거
 
     div.innerHTML = `
       <div class="ws-header" style="gap:10px;">
