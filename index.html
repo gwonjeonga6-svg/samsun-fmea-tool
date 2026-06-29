@@ -1086,19 +1086,12 @@ function updateRPN4(slider) {
   const s = parseInt(sliders[0].value), o = parseInt(sliders[1].value), d = parseInt(sliders[2].value);
   const rpn = s * o * d;
 
-  // S값 변경 시 autoSelected 재평가
+  // S값 변경 시 autoSelected 재평가 (자동선정 없음 - 수동 선정만)
   const section = box.closest('.ws-section');
-  if (section) {
-    if (s >= 8) {
-      section.dataset.selected = '1';
-      section.dataset.autoSelected = '1';
-    } else {
-      // S<8로 낮추면 자동선정 해제 (수동 선정은 유지)
-      if (section.dataset.autoSelected === '1') {
-        section.dataset.autoSelected = '0';
-        section.dataset.selected = '0'; // 자동선정으로만 선정된 경우 해제
-      }
-    }
+  if (section && section.dataset.autoSelected === '1') {
+    // 이전에 자동선정된 경우만 해제 처리
+    section.dataset.autoSelected = '0';
+    section.dataset.selected = '0';
   }
 
   const vals = box.querySelectorAll('.sl-val');
@@ -1138,9 +1131,8 @@ function updateRPNSummary() {
     const o = parseInt(sliders[1]?.value||5);
     const d = parseInt(sliders[2]?.value||5);
     const rpn = s * o * d;
-    if (s >= 8) { item.dataset.selected = '1'; item.dataset.autoSelected = '1'; }
     const sel     = item.dataset.selected === '1';
-    const autoSel = item.dataset.autoSelected === '1';
+    const autoSel = false; // 자동선정 없음
     const headerSpans = item.querySelectorAll('.ws-header div span');
     const stepName = headerSpans[0]?.textContent || '';
     const subName  = headerSpans[1]?.textContent || subKey;
@@ -1183,10 +1175,8 @@ function updateRPNSummary() {
       const rank = rankMap[r.fkey];
       const rowBg = r.sel ? 'background:#f0f7ff;' : '';
       const isFirst = fi === 0;
-      const autoTag = r.autoSel ? `<span style="font-size:9px;background:#fdf0f0;color:#b03030;border:1px solid #f5c6c6;border-radius:3px;padding:1px 5px;margin-left:5px;">S≥8 필수</span>` : '';
       const btnStyle = r.sel ? 'background:#1a5fa8;color:#fff;border:2px solid #1a5fa8;' : 'background:#fff;color:var(--gray-600);border:2px solid var(--gray-300);';
-      const btnLabel = r.autoSel ? '✅ 자동선정' : r.sel ? '✅ 선정됨' : '선정하기';
-      const btnAttr  = r.autoSel ? 'disabled' : `onclick="toggleSelect('${r.fkey}')"`;
+      const btnLabel = r.sel ? '✅ 선정됨' : '선정하기';
       html += `<tr style="border-bottom:1px solid var(--gray-100);${rowBg}">`;
       if (isFirst) {
         html += `<td rowspan="${group.failures.length}" style="padding:7px 10px;vertical-align:middle;border-left:3px solid var(--blue);">
@@ -1195,27 +1185,27 @@ function updateRPNSummary() {
           <div style="font-size:10px;color:var(--gray-400);">${group.stepName}</div>
         </td>`;
       }
-      html += `<td style="padding:7px 10px;">${r.failure}${autoTag}</td>
-        <td style="padding:7px 8px;text-align:center;font-weight:${r.s>=8?'900':'400'};color:${r.s>=8?'#b03030':'var(--gray-700)'};">${r.s}</td>
+      html += `<td style="padding:7px 10px;">${r.failure}</td>
+        <td style="padding:7px 8px;text-align:center;">${r.s}</td>
         <td style="padding:7px 8px;text-align:center;">${r.o}</td>
         <td style="padding:7px 8px;text-align:center;">${r.d}</td>
         <td style="padding:7px 8px;text-align:center;"><span style="font-size:14px;font-weight:900;color:${rpnColor(r.rpn)};background:${rpnBg(r.rpn)};padding:2px 7px;border-radius:4px;">${r.rpn}</span></td>
         <td style="padding:7px 8px;text-align:center;font-weight:700;color:${rankColor(rank)};">${rank}위</td>
         <td style="padding:7px 8px;text-align:center;">
-          <button ${btnAttr} style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:${r.autoSel?'default':'pointer'};white-space:nowrap;${btnStyle}">${btnLabel}</button>
+          <button onclick="toggleSelect('${r.fkey}')" style="padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;${btnStyle}">${btnLabel}</button>
         </td>`;
       html += '</tr>';
     });
   });
 
   const selCount = rows.filter(r => r.sel).length;
-  html += `</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 선정된 고장유형 <strong style="color:var(--blue);">${selCount}개</strong>가 5단계 대상이 됩니다. ⚠️ S≥8 자동선정 고정</p>`;
+  html += `</tbody></table><p style="font-size:11px;color:var(--gray-400);margin-top:8px;">💡 선정된 고장유형 <strong style="color:var(--blue);">${selCount}개</strong>가 5단계 대상이 됩니다.</p>`;
   table.innerHTML = html;
 }
 
 function toggleSelect(fkey) {
   const item = document.querySelector(`#fmea-step4-container .ws-section[data-fkey="${fkey}"]`);
-  if (!item || item.dataset.autoSelected === '1') return;
+  if (!item) return;
   item.dataset.selected = item.dataset.selected === '1' ? '0' : '1';
   updateRPNSummary();
 }
