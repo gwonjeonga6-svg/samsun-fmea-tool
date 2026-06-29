@@ -1146,6 +1146,8 @@ function updateRPNSummary() {
     if (i > 0 && sorted[i].rpn < sorted[i-1].rpn) rank++;
     rankMap[r.fkey] = rank;
   });
+
+  const subMap = {}, subOrder = [];
   rows.forEach(r => {
     if (!subMap[r.subKey]) { subMap[r.subKey] = { subKey:r.subKey, subName:r.subName, stepName:r.stepName, failures:[] }; subOrder.push(r.subKey); }
     subMap[r.subKey].failures.push(r);
