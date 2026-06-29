@@ -242,10 +242,19 @@
 
   /* Print styles */
   @media print {
-    @page { size: A4 landscape; margin: 12mm 10mm; }
+    @page { size: A4 landscape; margin: 12mm 10mm 18mm 10mm; }
+    @page { @bottom-right { content: counter(page); font-size:9pt; color:#94A3B8; font-family:'Nanum Gothic','맑은 고딕',sans-serif; } }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .sidebar, .topbar, .btn-row, .export-bar, .save-btns, button,
     .proc-del, .proc-sub-del, .restore-banner, .progress-pill { display:none !important; }
+    /* 페이지 번호 */
+    .fmea-pagenum { display:none; }
+    body.print-mode .fmea-pagenum {
+      display:block !important;
+      position:fixed; bottom:6mm; right:10mm;
+      font-size:9pt; color:#94A3B8;
+      font-family:'Nanum Gothic','맑은 고딕',sans-serif;
+    }
     .main { margin-left:0 !important; }
     .page-content { padding:4px 10px !important; max-width:100% !important; margin-top:0 !important; }
     .ws-section, .card { break-inside:avoid; box-shadow:none !important; border:1px solid #ccc !important; margin-bottom:8px !important; }
@@ -2188,7 +2197,7 @@ function downloadWord() {
     mso-footer-margin: 20pt;
   }
   div.Section1 { page: Section1; }
-  body { font-family: '맑은 고딕', Arial, sans-serif; font-size: 10pt; margin: 0; line-height: 1.4; }
+  body { font-family: 'Nanum Gothic','맑은 고딕', Arial, sans-serif; font-size: 10pt; margin: 0; line-height: 1.4; }
   h1 { font-size: 15pt; color: #0f4080; border-bottom: 2px solid #0f4080; padding-bottom: 6px; margin-bottom: 5px; }
   .doc-meta { font-size: 9pt; color: #555; margin-bottom: 14px; }
   h2 { font-size: 11pt; color: #1a5fa8; margin-top: 16px; margin-bottom: 6px; background: #eaf1fb; padding: 4px 8px; border-left: 4px solid #1a5fa8; }
@@ -2265,7 +2274,7 @@ function downloadWord() {
   ${monitorRows || '<tr><td colspan="6">데이터 없음</td></tr>'}
 </table>
 
-<div class="footer">작성: ${printDate} &nbsp;|&nbsp; 대한환자안전질향상간호사회 FMEA Toolkit 기반</div>
+<div class="footer">작성: ${printDate} &nbsp;|&nbsp; 대한환자안전질향상간호사회 FMEA Toolkit 기반 &nbsp;|&nbsp; <span style="mso-field-code:'PAGE'"> <span style="mso-no-proof:yes"><!--[if supportFields]><span style='mso-element:field-begin'></span> PAGE <span style='mso-element:field-end'></span><![endif]--><span style='mso-no-proof:yes'>1</span></span> </span> / <span style="mso-field-code:'NUMPAGES'"><!--[if supportFields]><span style='mso-element:field-begin'></span> NUMPAGES <span style='mso-element:field-end'></span><![endif]--><span style='mso-no-proof:yes'>1</span></span> 페이지</div>
 </div></body></html>`;
 
   const blob = new Blob(['\ufeff' + html], { type: 'application/msword;charset=utf-8' });
@@ -2773,10 +2782,20 @@ function printReport() {
     const el = document.getElementById('step' + i);
     if (el) el.classList.remove('hidden');
   }
+  // 페이지 번호 div 생성 (총 8단계)
+  let pnum = document.getElementById('fmea-pagenum-fixed');
+  if (!pnum) {
+    pnum = document.createElement('div');
+    pnum.id = 'fmea-pagenum-fixed';
+    pnum.className = 'fmea-pagenum';
+    document.body.appendChild(pnum);
+  }
+  pnum.textContent = '※ 인쇄 시 머리글/바닥글 해제 권장';
   setTimeout(() => {
     window.print();
     setTimeout(() => {
       document.body.classList.remove('print-mode');
+      if (pnum) pnum.remove();
       const badge = document.getElementById('stepBadge');
       const cur = badge ? parseInt(badge.textContent.split('/')[0].trim()) : 8;
       for (let i = 1; i <= 8; i++) {
